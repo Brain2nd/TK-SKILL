@@ -1,0 +1,30 @@
+{
+  "feishu_app_id": "YOUR_FEISHU_APP_ID",
+  "feishu_app_secret": "YOUR_FEISHU_APP_SECRET",
+  "kol_crm_app_token": "YOUR_FEISHU_BASE_TOKEN",
+  "kol_tbl_creators": "YOUR_CREATORS_TABLE_ID",
+  "kol_tbl_pipeline_log": "YOUR_PIPELINE_LOG_TABLE_ID",
+  "kol_tbl_email_log": "YOUR_EMAIL_LOG_TABLE_ID",
+  "kol_tbl_deadlines": "YOUR_DEADLINES_TABLE_ID",
+  "kol_tbl_business_config": "YOUR_BUSINESS_CONFIG_TABLE_ID",
+  "kol_tbl_manual_events": "YOUR_MANUAL_EVENTS_TABLE_ID",
+  "kol_tbl_daily_summary": "YOUR_DAILY_SUMMARY_TABLE_ID",
+  "sender_accounts": [
+    {
+      "name": "YOUR_SENDER_NAME",
+      "user": "sender@example.com",
+      "pass": "YOUR_EMAIL_APP_PASSWORD"
+    }
+  ],
+  "smtp_host": "smtp.example.com",
+  "smtp_port": 465,
+  "imap_host": "imap.example.com",
+  "imap_port": 993,
+  "anthropic_api_key": "YOUR_ANTHROPIC_API_KEY",
+  "tikhub_api_key": "YOUR_TIKHUB_API_KEY",
+  "track_host": "https://tracking.example.com",
+  "our_brand_name": "YOUR_BRAND",
+  "brand_domain": "example.com",
+  "default_sender_name": "YOUR_SENDER_NAME",
+  "personalize_model": "claude-haiku-4-5-20251001"
+}

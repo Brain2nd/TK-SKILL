@@ -1,0 +1,145 @@
+[
+  {
+    "template_id": "step01",
+    "step": 1,
+    "name_cn": "首次建联",
+    "name_en": "First Outreach",
+    "tier": "all",
+    "variant": "",
+    "subject": "{{creator_name}} x JoyaGoo — Free Products + Paid Partnership",
+    "body": "Hi {{creator_name}},\n\nBeen following your content — your outfit and lifestyle posts are exactly what our community is into.\n\nI'm {{your_name}} from JoyaGoo. We're a shopping and shipping platform that helps people across the US, Canada, Europe, and Australia buy trending bags, streetwear, and fashion directly from Chinese marketplaces like Taobao, 1688, and Weidian. We handle the purchasing, quality check photos, and international shipping — making it super easy to access styles and prices you can't find locally.\n\nWe'd love to partner with you. Here's what we typically offer:\n• Pick any products you want from our platform — on us. Bags, shoes, clothing, accessories — your choice\n• Free international shipping straight to your door\n• Paid sponsorship fee on top\n• If we both like how it goes, we can turn this into a monthly partnership with fresh products, free shipping, and ongoing commission\n\nInterested? I'd love to send over the full details — just reply and we'll get started.\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
+    "notes": "优先发给粉丝>1500、近1月有更新、内容垂直度高的达人。开发信不要提具体金额，先建立兴趣再报价。"
+  },
+  {
+    "template_id": "step02",
+    "step": 2,
+    "name_cn": "合作报价（达人感兴趣）",
+    "name_en": "Collab Offer",
+    "tier": "all",
+    "variant": "offer",
+    "subject": "JoyaGoo Collaboration Details — Here's What We Have for You",
+    "body": "Hi {{creator_name}},\n\nThanks for your interest — we're excited to work with you! Here's our standard first-collaboration package:\n\nWhat we offer:\n• {{offer_amount}} CNY shopping balance (use it to order anything on joyagoo.com)\n• {{shipping_weight}} free international shipping\n• 5% commission on all shipping sales generated through your affiliate link\n• Invitation bonus upon completion of all three videos\n\nWhat we ask for — 3 videos:\n\n① Teaser Video (before your package ships)\nPost on TikTok and/or Instagram. Introduce JoyaGoo to your audience and share what you've ordered.\n\n② Unboxing Video (when your package arrives)\nShow your haul, react genuinely, and walk your followers through the JoyaGoo experience.\n\n③ Try-On & Q&A Video (1 week after unboxing)\nStyle your haul and answer your followers' questions about the platform.\n\nWe review all videos before they go live. Creators whose content performs well will be prioritised for larger collaboration packages and performance bonuses.\n\nIf this works for you, please register via your affiliate link below and reply with your registered JoyaGoo ID or email:\n{{affiliate_link}}\n\nLooking forward to creating something great together!\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
+    "notes": "Nano(1.5k-5k)→300CNY/3kg；Micro(5k-50k)→500CNY/3-5kg；Mid/Macro(50k+)→800-1200CNY/5-10kg"
+  },
+  {
+    "template_id": "step02_followup",
+    "step": 2,
+    "name_cn": "跟进（超1周未回复）",
+    "name_en": "Follow-up (No Reply)",
+    "tier": "all",
+    "variant": "followup",
+    "subject": "Quick follow-up — collab opportunity from JoyaGoo",
+    "body": "Hi {{creator_name}},\n\nJust circling back on my previous email — I know your inbox gets busy!\n\nI reached out last week about a collaboration opportunity with JoyaGoo. I wanted to make sure this didn't get lost.\n\nQuick recap of what we offer:\n• Free shopping balance to order anything on joyagoo.com\n• Free international shipping on your haul\n• 5% ongoing commission on orders from your followers\n• Potential paid partnerships for top-performing creators\n\nRegistration link: {{affiliate_link}}\n\nEven a quick reply would be greatly appreciated — would love to explore this with you!\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
+    "notes": "首次建联超1周无回复时发送，每个达人每次建联只进行一次followup。"
+  },
+  {
+    "template_id": "step02_declined",
+    "step": 2,
+    "name_cn": "感谢回复（不感兴趣）",
+    "name_en": "Thank You (Declined)",
+    "tier": "all",
+    "variant": "declined",
+    "subject": "Thanks for your reply, {{creator_name}}",
+    "body": "Hi {{creator_name}},\n\nThanks so much for getting back to me — I completely understand, and there's no pressure at all.\n\nIf things ever change or you'd like to revisit the idea in the future, please don't hesitate to reach out. We'd love to work with you!\n\nWishing you all the best with your content.\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
+    "notes": "达人明确表示不感兴趣时发送，发完推进pipeline到XX_Dropped。"
+  },
+  {
+    "template_id": "step03a",
+    "step": 3,
+    "name_cn": "同意合作（已通过链接注册）",
+    "name_en": "After Agreement — Registered via Link",
+    "tier": "all",
+    "variant": "A",
+    "subject": "Welcome to JoyaGoo — Next Steps for Our Collaboration",
+    "body": "Hi {{creator_name}},\n\nWelcome to the JoyaGoo creator family!\n\nYour affiliate link is: {{affiliate_link}}\n\nNext steps:\n• Add this link to your Linktree or social bio\n• Set the caption as: \"JoyaGoo — Sign up with a 3,000 CNY shipping coupon pack\"\n\nPlease reply once done, and I'll send over the contract immediately. After signing, your balance will be topped up and you can start shopping!\n\nThe teaser video is a key part of this collaboration — the better your audience understands JoyaGoo before your package arrives, the more engaged they'll be for your unboxing. We'll share a content brief to help you get it right.\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
+    "notes": "达人已通过联盟链接注册时使用。确认bio/Linktree已挂链接后再发合同，不要跳步骤。"
+  },
+  {
+    "template_id": "step03b",
+    "step": 3,
+    "name_cn": "同意合作（未用链接注册）",
+    "name_en": "After Agreement — Not Registered via Link",
+    "tier": "all",
+    "variant": "B",
+    "subject": "Welcome to JoyaGoo — One Quick Thing Before We Send the Contract",
+    "body": "Hi {{creator_name}},\n\nGreat to have you on board! Your affiliate link is: {{affiliate_link}}\n\nNext steps:\n• Add this link to your Linktree or social bio\n• Set the caption as: \"JoyaGoo — Sign up with a 3,000 CNY shipping coupon pack\"\n\nOne quick note: we noticed your account was registered directly on our website rather than through an affiliate link. This means your account doesn't include the 3,000 CNY coupon pack that followers receive when they sign up via a creator's link.\n\nThis coupon pack is one of the strongest reasons for your audience to register — mentioning it in your videos will directly improve your commission earnings.\n\nPlease confirm once your link is live in your bio, and I'll send the contract right away.\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
+    "notes": "达人同意合作但未通过联盟链接注册时使用。确认bio有链接后再发合同，不要跳步骤。"
+  },
+  {
+    "template_id": "step04",
+    "step": 4,
+    "name_cn": "签合同 + 预热视频指引",
+    "name_en": "Contract Signed + Teaser Brief",
+    "tier": "all",
+    "variant": "",
+    "subject": "Contract Received — Next Steps + Your Teaser Video Brief",
+    "body": "Hi {{creator_name}},\n\nContract received — thank you! We're topping up your balance now. You can start shopping on joyagoo.com straight away.\n\nAbout the Teaser Video — Deadline: 5 days after QC\n\nAs agreed in our contract, the teaser video must be finalised within 5 days after your items pass QC. Please start planning and filming now.\n\nTeaser Video Brief: https://tinyurl.com/2b33gwoq\n\nKey things to include in the teaser:\n• Cover featuring JoyaGoo logo / joyagoo.com\n• A quick intro to what JoyaGoo is and how it works\n• What you ordered and why\n• How to register via your affiliate link for the 3,000 CNY coupon pack\n• Your excitement for the incoming package\n• #JoyaGoo in the title\n\nPlease send us the draft before posting — we'll review it within 24 hours.\n\nReference video: https://www.tiktok.com/@jessikarah/video/7537794595128642847\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
+    "notes": "充值后提醒达人尽快发预热视频草稿。预热视频审核通过后才安排发货——这是流程红线。"
+  },
+  {
+    "template_id": "step05",
+    "step": 5,
+    "name_cn": "催预热视频草稿（QC通过）",
+    "name_en": "Request Teaser Draft",
+    "tier": "all",
+    "variant": "",
+    "subject": "Your Order Is at Our Warehouse — Teaser Video Draft Needed",
+    "body": "Hi {{creator_name}},\n\nGood news — your entire order has arrived at our warehouse and has passed QC. It's ready to ship!\n\nAs per our agreement, the teaser video needs to be finalised within 5 days from today. We need your draft for a quick review before we proceed with shipping.\n\n• Deadline to submit draft: within 5 days of this email\n• We'll review within 24 hours of receiving your draft\n• Shipment will be arranged as soon as the video is live\n\nFull Teaser Brief: https://tinyurl.com/2b33gwoq\n\nPlease send the draft to this email when it's ready. Looking forward to it!\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
+    "notes": "QC通过之日起计5天为预热视频deadline。3天无回应发第二次催促；5天到期仍无草稿，暂停发货。"
+  },
+  {
+    "template_id": "step06",
+    "step": 6,
+    "name_cn": "包裹已寄出",
+    "name_en": "Package Shipped",
+    "tier": "all",
+    "variant": "",
+    "subject": "Your Package Is on Its Way — Start Preparing Your Unboxing Video!",
+    "body": "Hi {{creator_name}},\n\nYour package has been shipped and should arrive in approximately 15 days.\n\nAs agreed in our contract, the unboxing video must be finalised within 7 days of receiving your package. Please start preparing now.\n\nUnboxing Video Brief: https://tinyurl.com/2douh68h\n\nKey things to include:\n• JoyaGoo logo / branding visible\n• Genuine unboxing — every item, real reactions\n• QC photos comparison (visible in your JoyaGoo account)\n• Price comparison — what you paid vs. local prices\n• How your followers can register via your link for the 3,000 CNY coupon pack\n\nWe're excited to see what you create!\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
+    "notes": "提醒达人登录JoyaGoo后台查看QC照片，在开箱视频中做对比展示效果更好。"
+  },
+  {
+    "template_id": "step07",
+    "step": 7,
+    "name_cn": "包裹已送达",
+    "name_en": "Package Delivered",
+    "tier": "all",
+    "variant": "",
+    "subject": "Your Package Has Arrived — Time to Shoot Your Unboxing!",
+    "body": "Hi {{creator_name}},\n\nYour package has landed — time for the moment your followers have been waiting for!\n\nReminder: the unboxing video must be finalised within 7 days of today. Please aim to send us your draft within 5 days so we have time to review.\n\nQuick reminder of what makes a great unboxing:\n• Show the JoyaGoo branding / logo\n• Genuine unboxing — every item, real reactions\n• Compare QC photos to actual items\n• Share price comparisons with local alternatives\n• Remind followers to sign up via your link for the 3,000 CNY coupon pack\n\nFull Unboxing Brief: https://tinyurl.com/2douh68h\n\nPlease send the draft to us before posting — we'll review within 24 hours.\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
+    "notes": "收货之日起计7天为开箱视频deadline。收货后第3天若未收到草稿，主动跟进。"
+  },
+  {
+    "template_id": "step08",
+    "step": 8,
+    "name_cn": "开箱视频发布后 — 试穿+Q&A",
+    "name_en": "Try-On & Q&A Video",
+    "tier": "all",
+    "variant": "",
+    "subject": "Your Unboxing Is Live — Here Are Your Results + Next Video",
+    "body": "Hi {{creator_name}},\n\nYour unboxing video is doing great — so far it's generated {{registration_count}} registrations and {{commission_amount}} in shipping commissions for you. Nice work!\n\nNow it's time for the final video: your Try-On & Q&A. This video must be published within 10 days of your unboxing going live.\n\nWhat to include:\n• Style or use the products from your haul\n• Answer common follower questions:\n  — Can I buy [specific product]?\n  — Do you ship to [country]?\n  — How much does shipping cost?\n  — How do I register?\n• Add questions specific to your comments section\n• Remind followers that signing up via your affiliate link gets them a 3,000 CNY coupon pack\n\nPlease send us the draft before posting. We'll review within 24 hours.\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
+    "notes": "开箱视频发布后发送，{{registration_count}}和{{commission_amount}}需从后台获取实际数据。"
+  },
+  {
+    "template_id": "step09",
+    "step": 9,
+    "name_cn": "沟通置顶视频",
+    "name_en": "Pin Video Request",
+    "tier": "all",
+    "variant": "",
+    "subject": "Your video is doing really well — one quick request!",
+    "body": "Hi {{creator_name}},\n\nJust wanted to share some exciting news — your video is performing really well. The engagement is great, and we're seeing strong interest from your audience.\n\nOne thing that could make a big difference: if you're able to pin this video to the top of your profile, it would keep the momentum going and help even more of your followers discover JoyaGoo over time.\n\nPinning a high-performing video is one of the simplest ways to maximise the results of this collaboration — and the longer it stays visible, the more commissions it can generate for you.\n\nLet us know if you have any questions.\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
+    "notes": "触发条件：视频发布后3-7天，单条播放>20k。预热视频和开箱视频均可沟通置顶。"
+  },
+  {
+    "template_id": "step10",
+    "step": 10,
+    "name_cn": "里程碑达成 — 产品推荐表",
+    "name_en": "Milestone — Product Sheet",
+    "tier": "all",
+    "variant": "",
+    "subject": "You've hit a milestone — here's something extra for your audience",
+    "body": "Hi {{creator_name}},\n\nWe've been watching your stats and you've hit a real milestone — {{registration_count}} followers have signed up and {{commission_amount}} have already placed orders through your link. That's genuinely impressive!\n\nTo help you keep that momentum going, we've put together a product recommendation sheet — a curated list of items your followers can order directly through JoyaGoo, matched to your content style.\n\nWe'd love for you to add it to your Linktree. We suggest labelling it:\n\"My Fave Finds from China via JoyaGoo\"\n\nWe'll keep it updated as new products come in. Let us know if you'd like any changes to the selection!\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
+    "notes": "触发条件：>=20注册用户 + >=5下单用户。产品表格需与达人内容方向高度匹配。"
+  }
+]

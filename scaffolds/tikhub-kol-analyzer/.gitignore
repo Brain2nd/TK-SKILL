@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# API keys
+.env
+*.env
+
+# Output data (contains creator PII — do not commit)
+output/
+*.csv
+
+# macOS
+.DS_Store
+
+# Downloads / raw input files
+*.xlsx
+*.xls

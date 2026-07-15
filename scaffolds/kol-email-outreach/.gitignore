@@ -1,0 +1,5 @@
+config.json
+node_modules/
+kol-crm-mcp/node_modules/
+tikhub-mcp/node_modules/
+lib/imap-email-mcp-patched/node_modules/

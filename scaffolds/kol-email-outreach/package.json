@@ -1,0 +1,19 @@
+{
+  "name": "kol-crm",
+  "version": "1.0.0",
+  "description": "KOL CRM outreach automation — plain Node.js modules",
+  "type": "module",
+  "scripts": {
+    "outreach": "node auto_outreach.mjs",
+    "monitor": "node auto_reply_monitor.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.61.0",
+    "imap-simple": "^5.1.0",
+    "mailparser": "^3.7.2",
+    "nodemailer": "^6.9.16"
+  }
+}
