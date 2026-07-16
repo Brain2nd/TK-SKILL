@@ -9,9 +9,14 @@ venv/
 .env
 *.env
 
-# Output data (contains creator PII — do not commit)
-output/
+# Output data is intentionally published for this project. Creator emails in
+# these CSVs were taken from public bios/profile links at the user's request.
 *.csv
+!output/
+!output/**/*.csv
+
+# Local Claude Code permissions and credentials must never be published.
+.claude/
 
 # macOS
 .DS_Store

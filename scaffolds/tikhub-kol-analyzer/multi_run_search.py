@@ -14,7 +14,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from config import (
-    ANTHROPIC_API_KEY, TIKHUB_API_KEY,
+    LLM_API_KEY, TIKHUB_API_KEY,
     SEARCH_PAGES_PER_KEYWORD, SEARCH_RESULTS_PER_PAGE, VIDEOS_PER_USER,
     COMMENTS_PER_VIDEO, API_DELAY_SECONDS, DEEP_ANALYSIS_DELAY_SECONDS,
     OUTPUT_DIR,
@@ -179,7 +179,7 @@ def main():
         time.sleep(DEEP_ANALYSIS_DELAY_SECONDS)
 
     log.info("  3b. Claude AI relevance scoring...")
-    if ANTHROPIC_API_KEY:
+    if LLM_API_KEY:
         score_all_creators_dogegoo(step1_passed)
     else:
         for c in step1_passed:

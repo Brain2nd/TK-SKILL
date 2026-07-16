@@ -23,11 +23,11 @@ import re
 import time
 
 from config import (
-    ANTHROPIC_API_KEY, TIKHUB_API_KEY,
+    LLM_API_KEY, TIKHUB_API_KEY,
     SEARCH_PAGES_PER_KEYWORD, SEARCH_RESULTS_PER_PAGE, VIDEOS_PER_USER,
     COMMENTS_PER_VIDEO, COMMENT_SAMPLE_VIDEOS,
     API_DELAY_SECONDS, DEEP_ANALYSIS_DELAY_SECONDS,
-    OUTPUT_RAW_CSV, OUTPUT_STEP2_CSV, OUTPUT_FINAL_CSV,
+    OUTPUT_DIR,
 )
 from search_keywords import SEARCH_KEYWORDS
 from tikhub_fetcher import (
@@ -84,6 +84,10 @@ def main():
                         help="Keyword tiers to search (default: all)")
     parser.add_argument("--keywords", nargs="+", default=None,
                         help="Search specific keywords directly, e.g. --keywords 'taobao haul'")
+    parser.add_argument("--keyword", default=None,
+                        help="Search one keyword (shortcut for --keywords; output is grouped by keyword)")
+    parser.add_argument("--output-dir", default=None,
+                        help="Directory for step1.csv, step2.csv, and final.csv")
     parser.add_argument("--max",      type=int, default=0, help="Max creator pool size (0=unlimited)")
     parser.add_argument("--no-fake",  action="store_true", help="Skip fake-view detection")
     parser.add_argument("--resume",   action="store_true", help="Resume from checkpoint CSVs")
@@ -91,15 +95,34 @@ def main():
 
     log.info("=== Dogegoo TikTok KOL Filter ===")
 
+    if args.keyword and args.keywords:
+        parser.error("use either --keyword or --keywords, not both")
+
+    selected_keyword = args.keyword or (args.keywords[0] if args.keywords and len(args.keywords) == 1 else None)
+    if args.output_dir:
+        outdir = args.output_dir
+    elif selected_keyword:
+        outdir = os.path.join(OUTPUT_DIR, selected_keyword.replace(" ", "_").replace("/", "-"))
+    else:
+        outdir = OUTPUT_DIR
+    output_raw_csv = os.path.join(outdir, "step1.csv")
+    output_step2_csv = os.path.join(outdir, "step2.csv")
+    output_final_csv = os.path.join(outdir, "final.csv")
+
+    if not args.mock and not TIKHUB_API_KEY:
+        parser.error("TIKHUB_API_KEY is required unless --mock is used")
+
     # ── Phase 1: Search ───────────────────────────────────────────────────────
     if args.mock:
-        from mock_data import MOCK_CREATORS
+        from mock_data import MOCK_CREATORS, MOCK_DEEP_ANALYSIS
         creator_objects = MOCK_CREATORS
         candidate_usernames = {c.username for c in creator_objects}
         log.info(f"Phase 1 (mock): {len(candidate_usernames)} creators loaded")
     else:
         log.info("Phase 1: Searching TikHub with keyword bank...")
-        if args.keywords:
+        if args.keyword:
+            selected_keywords = {"custom": [args.keyword]}
+        elif args.keywords:
             selected_keywords = {"custom": args.keywords}
         else:
             selected_keywords = {k: v for k, v in SEARCH_KEYWORDS.items() if k in args.tiers}
@@ -115,7 +138,7 @@ def main():
     # ── Phase 2: Fetch + basic features + hard filter ─────────────────────────
     log.info("Phase 2: Fetch videos + hard filter...")
 
-    already_processed = _load_checkpoint(OUTPUT_RAW_CSV) if args.resume else set()
+    already_processed = _load_checkpoint(output_raw_csv) if args.resume else set()
     step1_passed: list[dict] = []
 
     if args.mock:
@@ -173,7 +196,7 @@ def main():
             time.sleep(API_DELAY_SECONDS)
 
     log.info(f"Phase 2 complete: {len(step1_passed)} passed Step 1")
-    _save_checkpoint(step1_passed, OUTPUT_RAW_CSV)
+    _save_checkpoint(step1_passed, output_raw_csv)
 
     if not step1_passed:
         log.info("No candidates passed Step 1 — exiting.")
@@ -182,31 +205,36 @@ def main():
     # ── Phase 3: Deep analysis + must-pass filter ─────────────────────────────
     log.info("Phase 3: Deep analysis (comments / Claude / fake detection)...")
 
-    # 3a. Western ratio from comments
-    log.info("  3a. Computing audience western ratio from comments...")
-    for c in step1_passed:
-        try:
-            c["western_ratio"] = compute_western_ratio_from_ids(
-                c["top5_video_ids"], comments_per_video=COMMENTS_PER_VIDEO
-            )
-            log.info(f"    @{c['username']}: western={c['western_ratio']:.0%}")
-        except Exception as exc:
-            log.warning(f"    @{c['username']} comment error: {exc}")
-            c["western_ratio"] = 0.0
-        time.sleep(DEEP_ANALYSIS_DELAY_SECONDS)
-
-    # 3b. Claude AI relevance scoring
-    log.info("  3b. Claude AI relevance scoring...")
-    if ANTHROPIC_API_KEY:
-        score_all_creators_dogegoo(step1_passed)
-    else:
-        log.warning("  No ANTHROPIC_API_KEY — skipping Claude scoring")
+    if args.mock:
+        log.info("  Using offline deep-analysis fixtures")
         for c in step1_passed:
-            c["ai_relevance_score"] = None
-            c["primary_category"]   = "no-key"
+            c.update(MOCK_DEEP_ANALYSIS.get(c["username"], {}))
+    else:
+        # 3a. Western ratio from comments
+        log.info("  3a. Computing audience western ratio from comments...")
+        for c in step1_passed:
+            try:
+                c["western_ratio"] = compute_western_ratio_from_ids(
+                    c["top5_video_ids"], comments_per_video=COMMENTS_PER_VIDEO
+                )
+                log.info(f"    @{c['username']}: western={c['western_ratio']:.0%}")
+            except Exception as exc:
+                log.warning(f"    @{c['username']} comment error: {exc}")
+                c["western_ratio"] = 0.0
+            time.sleep(DEEP_ANALYSIS_DELAY_SECONDS)
+
+        # 3b. Claude AI relevance scoring
+        log.info("  3b. Claude AI relevance scoring...")
+        if LLM_API_KEY:
+            score_all_creators_dogegoo(step1_passed)
+        else:
+            log.warning("  No LLM API key — skipping AI relevance scoring")
+            for c in step1_passed:
+                c["ai_relevance_score"] = None
+                c["primary_category"]   = "no-key"
 
     # 3c. Fake view detection
-    if not args.no_fake:
+    if not args.mock and not args.no_fake:
         log.info("  3c. Fake view detection...")
         for c in step1_passed:
             vid_id = c.get("top_video_id", "")
@@ -237,7 +265,7 @@ def main():
             log.info(f"  ❌ @{c['username']} failed Step 2: {reason}")
 
     log.info(f"Phase 3 complete: {len(step2_passed)} passed Step 2")
-    _save_checkpoint(step2_passed, OUTPUT_STEP2_CSV)
+    _save_checkpoint(step2_passed, output_step2_csv)
 
     if not step2_passed:
         log.info("No candidates passed Step 2 — exiting.")
@@ -248,7 +276,7 @@ def main():
     calculate_scores(step2_passed)
     step2_passed.sort(key=lambda c: c["final_score"] or 0, reverse=True)
 
-    export_scored_csv(step2_passed, OUTPUT_FINAL_CSV)
+    export_scored_csv(step2_passed, output_final_csv)
 
     # ── Phase 5: Contact extraction ───────────────────────────────────────────
     log.info("Phase 5: Extracting contact info (email / instagram / bio_url)...")
@@ -272,10 +300,10 @@ def main():
         m = _ig_re.search(bio)
         c["instagram"] = m.group(1) if m else ""
         # bio_url from TikHub profile
-        bio_url = fetch_bio_url(c["username"])
+        bio_url = c.get("bio_url", "") if args.mock else fetch_bio_url(c["username"])
         c["bio_url"] = bio_url
         # scrape bio_url page for email/ig
-        if bio_url and (not c["email"] or not c["instagram"]):
+        if not args.mock and bio_url and (not c["email"] or not c["instagram"]):
             page = _scrape(bio_url)
             if not c["email"]:
                 m = _email_re.search(page)
@@ -287,7 +315,7 @@ def main():
         time.sleep(0.5)
 
     # Re-export with contact fields filled in
-    export_scored_csv(step2_passed, OUTPUT_FINAL_CSV)
+    export_scored_csv(step2_passed, output_final_csv)
     log.info("Phase 5 complete. Contact fields written to final CSV.")
 
     # Print top 20
@@ -298,7 +326,7 @@ def main():
               f"haul={c['has_haul_content']:.0%} | AI={c.get('ai_relevance_score') or 0:.2f} | "
               f"west={c.get('western_ratio') or 0:.0%} | {c.get('primary_category','')}")
 
-    log.info(f"Done! {len(step2_passed)} final candidates → {OUTPUT_FINAL_CSV}")
+    log.info(f"Done! {len(step2_passed)} final candidates → {output_final_csv}")
 
 
 if __name__ == "__main__":

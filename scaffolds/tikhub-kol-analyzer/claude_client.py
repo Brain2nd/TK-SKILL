@@ -8,7 +8,15 @@ score_creator(username, bio, video_descriptions) → dict with:
 """
 import json
 import anthropic
-from config import ANTHROPIC_API_KEY, CLAUDE_MODEL
+from config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, LLM_PROVIDER
+
+
+def _make_client() -> anthropic.Anthropic:
+    """Create a Claude or DeepSeek Anthropic-compatible client."""
+    kwargs = {"api_key": LLM_API_KEY}
+    if LLM_BASE_URL:
+        kwargs["base_url"] = LLM_BASE_URL
+    return anthropic.Anthropic(**kwargs)
 
 
 def score_creator(
@@ -22,7 +30,7 @@ def score_creator(
     Falls back to {"relevance_score": 0.0, ...} on any parse/API error.
     """
     if client is None:
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        client = _make_client()
 
     descriptions_text = "\n".join(
         f"- desc: {v.get('desc', '')} | tags: {', '.join(v.get('hashtags', []))}"
@@ -86,7 +94,7 @@ def score_creator(
 
     try:
         response = client.messages.create(
-            model=CLAUDE_MODEL,
+            model=LLM_MODEL,
             max_tokens=600,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -141,9 +149,9 @@ def score_all_creators_dogegoo(
     Sets: ai_relevance_score, primary_category, ai_reasoning.
     """
     if client is None:
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        client = _make_client()
 
-    print(f"\n[Claude] Scoring {len(candidates)} candidates for Dogegoo relevance...")
+    print(f"\n[{LLM_PROVIDER}] Scoring {len(candidates)} candidates for Dogegoo relevance...")
     for i, c in enumerate(candidates, 1):
         result = score_creator(
             c["username"],

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "tikhub-tiktok": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://mcp.tikhub.io/tiktok/mcp",
+        "--header",
+        "Authorization: Bearer YOUR_TIKHUB_API_KEY"
+      ]
+    }
+  }
+}

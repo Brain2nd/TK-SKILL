@@ -11,6 +11,23 @@ import os
 # === API Keys (read from environment — never hardcode here) ===
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", os.environ.get("CLAUDE_API_KEY", ""))
 CLAUDE_API_KEY = ANTHROPIC_API_KEY   # backward-compat alias
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
+
+# DeepSeek exposes an Anthropic-compatible messages API, so both providers use
+# the same client code. Set LLM_PROVIDER to choose explicitly, or leave auto.
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "auto").lower()
+if LLM_PROVIDER not in {"auto", "anthropic", "deepseek"}:
+    raise ValueError("LLM_PROVIDER must be one of: auto, anthropic, deepseek")
+if LLM_PROVIDER == "deepseek" or (LLM_PROVIDER == "auto" and DEEPSEEK_API_KEY):
+    LLM_PROVIDER = "deepseek"
+    LLM_API_KEY = DEEPSEEK_API_KEY
+    LLM_BASE_URL = "https://api.deepseek.com/anthropic"
+    LLM_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-flash")
+else:
+    LLM_PROVIDER = "anthropic"
+    LLM_API_KEY = ANTHROPIC_API_KEY
+    LLM_BASE_URL = None
+    LLM_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
 
 TIKHUB_API_KEY = os.environ.get("TIKHUB_API_KEY", os.environ.get("TIKHUB_KEY", ""))
 TIKHUB_KEY = TIKHUB_API_KEY          # backward-compat alias
@@ -18,7 +35,7 @@ TIKHUB_KEY = TIKHUB_API_KEY          # backward-compat alias
 TIKAPI_KEY = os.environ.get("TIKAPI_KEY", "")
 
 # === Claude model ===
-CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+CLAUDE_MODEL = LLM_MODEL  # backward-compat alias
 
 # === Search configuration ===
 SEARCH_KEYWORD = "jfashion"          # legacy single-keyword mode
