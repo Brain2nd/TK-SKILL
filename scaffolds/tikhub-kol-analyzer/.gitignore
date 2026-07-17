@@ -4,6 +4,8 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+node_modules/
+playwright-report/
 
 # API keys
 .env
@@ -17,6 +19,7 @@ venv/
 
 # Local Claude Code permissions and credentials must never be published.
 .claude/
+.fastmoss-browser-profile/
 
 # macOS
 .DS_Store

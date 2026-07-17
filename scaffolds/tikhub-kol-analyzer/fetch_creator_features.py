@@ -16,8 +16,7 @@ import time
 import openpyxl
 
 from config import TIKHUB_API_KEY, VIDEOS_PER_USER, API_DELAY_SECONDS
-from tikhub_fetcher import fetch_user_videos, _parse_video
-from models import Creator
+from tikhub_fetcher import creator_from_video_rows, fetch_user_videos
 from feature_engine import compute_basic_features
 
 
@@ -100,18 +99,7 @@ def fetch_and_compute(username: str) -> dict | None:
     if not video_raws:
         return None
 
-    author = video_raws[0].get("author", {})
-    videos = [_parse_video(v) for v in video_raws]
-
-    creator = Creator(
-        user_id=author.get("uid", ""),
-        username=author.get("unique_id", username),
-        nickname=author.get("nickname", username),
-        followers=author.get("follower_count", 0),
-        following=author.get("following_count", 0),
-        bio=author.get("signature", ""),
-        videos=videos,
-    )
+    creator = creator_from_video_rows(username, video_raws)
 
     features = compute_basic_features(creator)
     features["profile_url"] = f"https://www.tiktok.com/@{creator.username}"

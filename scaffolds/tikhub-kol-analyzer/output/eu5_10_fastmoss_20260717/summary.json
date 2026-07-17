@@ -1,0 +1,14 @@
+{
+  "mode": "fastmoss",
+  "collection_mode": "authenticated_website",
+  "raw_candidates_with_full_email": 18,
+  "qualified_strict_after_mx": 18,
+  "final": 10,
+  "countries": {
+    "ES": 10,
+    "FR": 0,
+    "DE": 0,
+    "IT": 0,
+    "GB": 0
+  }
+}
