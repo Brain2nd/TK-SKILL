@@ -1,105 +1,86 @@
-/**
- * imap_email — IMAP email read functions (plain module, no MCP)
- */
-import imaps from "imap-simple";
+/** IMAP read helpers built on ImapFlow. */
+import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 
-function makeImapConfig(env) {
-  return {
-    imap: {
-      user: env.IMAP_USER,
-      password: env.IMAP_PASSWORD,
-      host: env.IMAP_HOST,
-      port: parseInt(env.IMAP_PORT || "993", 10),
-      tls: env.IMAP_TLS !== "false",
-      authTimeout: 10000,
-      tlsOptions: { rejectUnauthorized: false },
-    },
-  };
+function makeClient(env) {
+  const secure = String(env.IMAP_TLS ?? "true").toLowerCase() !== "false";
+  const rejectUnauthorized = String(env.IMAP_TLS_REJECT_UNAUTHORIZED ?? "true").toLowerCase() !== "false";
+  return new ImapFlow({
+    host: env.IMAP_HOST,
+    port: Number(env.IMAP_PORT || 993),
+    secure,
+    auth: { user: env.IMAP_USER, pass: env.IMAP_PASSWORD },
+    tls: { rejectUnauthorized },
+    logger: false,
+  });
 }
 
-/**
- * List emails from an IMAP mailbox.
- * @param {object} env - { IMAP_USER, IMAP_PASSWORD, IMAP_HOST, IMAP_PORT }
- * @param {object} opts - { folder, sinceDate, limit, unseenOnly }
- * @returns {Promise<Array<{uid, date, from, to, subject, flags}>>}
- */
+function addresses(list = []) {
+  return list.map(item => item.name ? `${item.name} <${item.address}>` : item.address).filter(Boolean).join(", ");
+}
+
+/** List newest matching messages without changing seen flags. */
 export async function listEmails(env, { folder = "INBOX", sinceDate, limit = 20, unseenOnly = false } = {}) {
-  const connection = await imaps.connect(makeImapConfig(env));
+  const client = makeClient(env);
+  await client.connect();
+  let lock;
   try {
-    await connection.openBox(folder);
-
-    let searchCriteria = ["ALL"];
-    if (unseenOnly) searchCriteria = ["UNSEEN"];
-    else if (sinceDate) searchCriteria = [["SINCE", sinceDate]];
-
-    const fetchOptions = {
-      bodies: ["HEADER.FIELDS (FROM TO SUBJECT DATE)"],
-      struct: true,
-    };
-
-    const messages = await connection.search(searchCriteria, fetchOptions);
-    return messages.slice(-limit).reverse().map(msg => {
-      const header = msg.parts.find(p => p.which.includes("HEADER"))?.body || {};
-      return {
-        uid: msg.attributes.uid,
-        date: header.date?.[0],
-        from: header.from?.[0],
-        to: header.to?.[0],
-        subject: header.subject?.[0],
-        flags: msg.attributes.flags,
-      };
-    });
+    lock = await client.getMailboxLock(folder);
+    const query = unseenOnly ? { seen: false } : sinceDate ? { since: new Date(sinceDate) } : { all: true };
+    const uids = await client.search(query, { uid: true });
+    const selected = uids.slice(-limit).reverse();
+    const messages = [];
+    for (const uid of selected) {
+      const message = await client.fetchOne(uid, { envelope: true, flags: true }, { uid: true });
+      if (!message) continue;
+      messages.push({
+        uid,
+        date: message.envelope?.date,
+        from: addresses(message.envelope?.from),
+        to: addresses(message.envelope?.to),
+        subject: message.envelope?.subject || "",
+        flags: [...(message.flags || [])],
+      });
+    }
+    return messages;
   } finally {
-    connection.end();
+    lock?.release();
+    await client.logout().catch(() => client.close());
   }
 }
 
-/**
- * Fetch a single email by UID, including RFC 5322 threading headers.
- * @param {object} env - { IMAP_USER, IMAP_PASSWORD, IMAP_HOST, IMAP_PORT }
- * @param {object} opts - { uid, folder }
- * @returns {Promise<{uid, from, to, subject, date, text, html, messageId, inReplyTo, references, attachments} | null>}
- */
+/** Fetch and parse one message by IMAP UID. */
 export async function getEmail(env, { uid, folder = "INBOX" } = {}) {
-  const connection = await imaps.connect(makeImapConfig(env));
+  const client = makeClient(env);
+  await client.connect();
+  let lock;
   try {
-    await connection.openBox(folder);
-
-    const messages = await connection.search(
-      [["UID", uid]],
-      { bodies: [""], struct: true }
-    );
-
-    if (!messages.length) return null;
-
-    const msg = messages[0];
-    const rawBody = msg.parts.find(p => p.which === "")?.body;
-    const parsed = await simpleParser(rawBody);
-
+    lock = await client.getMailboxLock(folder);
+    const message = await client.fetchOne(uid, { source: true }, { uid: true });
+    if (!message?.source) return null;
+    const parsed = await simpleParser(message.source);
     return {
-      uid: msg.attributes.uid,
-      from: parsed.from?.text,
-      to: parsed.to?.text,
-      cc: parsed.cc?.text,
-      subject: parsed.subject,
+      uid,
+      from: parsed.from?.text || "",
+      to: parsed.to?.text || "",
+      cc: parsed.cc?.text || "",
+      subject: parsed.subject || "",
       date: parsed.date,
-      text: parsed.text,
-      html: parsed.html,
+      text: parsed.text || "",
+      html: parsed.html || "",
       messageId: parsed.messageId || "",
       inReplyTo: parsed.inReplyTo || "",
       references: Array.isArray(parsed.references)
         ? parsed.references
-        : parsed.references
-        ? [parsed.references]
-        : [],
-      attachments: parsed.attachments?.map(a => ({
-        filename: a.filename,
-        contentType: a.contentType,
-        size: a.size,
+        : parsed.references ? [parsed.references] : [],
+      attachments: (parsed.attachments || []).map(attachment => ({
+        filename: attachment.filename || "",
+        contentType: attachment.contentType || "",
+        size: attachment.size || 0,
       })),
     };
   } finally {
-    connection.end();
+    lock?.release();
+    await client.logout().catch(() => client.close());
   }
 }

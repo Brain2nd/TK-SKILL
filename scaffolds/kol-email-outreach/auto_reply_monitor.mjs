@@ -13,6 +13,7 @@ import cfg from "./lib/config.mjs";
 import { renderTemplateForCreator, advancePipeline, logEmailOpen, btListRecords, btUpdateRecord } from "./lib/kol_crm.mjs";
 import { listEmails, getEmail } from "./lib/imap_email.mjs";
 import { sendDM, checkReplies } from "./lib/tiktok_dm.mjs";
+import { LEGACY_ACTIVE_STAGES, legacyMonitorMayActOnStage } from "./lib/legacy_monitor_policy.mjs";
 
 const CRM_ENV = {
   FEISHU_APP_ID: cfg.feishu_app_id,
@@ -311,6 +312,11 @@ function shouldHoldAdvance(currentStage, targetStage) {
 const ts = () => new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
 
 async function main() {
+  if (cfg.enable_legacy_outbound_monitor !== true) {
+    throw new Error(
+      "legacy outbound monitor is disabled; migrate its sends to the durable outbox before enabling enable_legacy_outbound_monitor",
+    );
+  }
   console.error(`[${ts()}] === 自动回复监控启动 ===`);
   if (MAX_AUTO_STAGE !== "09_Completed") {
     console.error(`[${ts()}] 🛑 自动流程上限：${MAX_AUTO_STAGE}`);
@@ -363,7 +369,10 @@ async function main() {
   const stageMap = {};
   const emailToHandle = {};
   const notesMap = {};
-  const ACTIVE_STAGES = new Set(["01_FirstOutreach", "02_CollabOffer", "03_Agreed", "04_ContractSigned", "05_TeaserDraftDue", "06_PackageShipped", "07_PackageDelivered", "08_TryOnVideo", "09_Completed"]);
+  // Stage 01 belongs exclusively to first_outreach_monitor.mjs. Keeping it out
+  // here prevents old open-pixel follow-ups, auto-advance and auto-drop logic
+  // from bypassing fixed-offer followup_mode=disabled.
+  const ACTIVE_STAGES = LEGACY_ACTIVE_STAGES;
   try {
     const tokRes = await fetch("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -876,7 +885,7 @@ async function main() {
       for (const it of r.data?.items || []) {
         const stage = it.fields?.["Pipeline Stage"];
         const stageStr = Array.isArray(stage) ? (stage[0]?.text || "") : (stage || "");
-        if (stageStr && stageStr !== "09_Completed" && stageStr !== "XX_Dropped") allActive.push(it);
+        if (legacyMonitorMayActOnStage(stageStr) && stageStr !== "09_Completed") allActive.push(it);
       }
       pageToken = r.data?.page_token || "";
     } while (pageToken);

@@ -1,0 +1,22 @@
+{
+  "schema_version": "first-contact-template.v1",
+  "content_template_id": "spain-tiktok-shop-eur20",
+  "content_template_version": "2026-07-17.2",
+  "intent": "fixed_offer",
+  "language": "en",
+  "subject": "Paid TikTok Shop short-form video opportunity",
+  "body": "Hi!\n\n{{personalized_hook}}\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\n{{sender_name}}",
+  "locked_blocks": [
+    "We have a paid TikTok Shop short-form video posting opportunity.",
+    "We will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.",
+    "Would you be interested in collaborating with us?"
+  ],
+  "required_reviews": [
+    "tiktok_shop_product_link_capability",
+    "stable_candidate_identity",
+    "recipient_email"
+  ],
+  "followup": {
+    "mode": "disabled"
+  }
+}

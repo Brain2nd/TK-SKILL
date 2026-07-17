@@ -6,9 +6,9 @@
     "name_en": "First Outreach",
     "tier": "all",
     "variant": "",
-    "subject": "{{creator_name}} x JoyaGoo — Free Products + Paid Partnership",
-    "body": "Hi {{creator_name}},\n\nBeen following your content — your outfit and lifestyle posts are exactly what our community is into.\n\nI'm {{your_name}} from JoyaGoo. We're a shopping and shipping platform that helps people across the US, Canada, Europe, and Australia buy trending bags, streetwear, and fashion directly from Chinese marketplaces like Taobao, 1688, and Weidian. We handle the purchasing, quality check photos, and international shipping — making it super easy to access styles and prices you can't find locally.\n\nWe'd love to partner with you. Here's what we typically offer:\n• Pick any products you want from our platform — on us. Bags, shoes, clothing, accessories — your choice\n• Free international shipping straight to your door\n• Paid sponsorship fee on top\n• If we both like how it goes, we can turn this into a monthly partnership with fresh products, free shipping, and ongoing commission\n\nInterested? I'd love to send over the full details — just reply and we'll get started.\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
-    "notes": "优先发给粉丝>1500、近1月有更新、内容垂直度高的达人。开发信不要提具体金额，先建立兴趣再报价。"
+    "subject": "Paid {{requested_deliverable}} rate inquiry — {{creator_name}} x {{brand_name}}",
+    "body": "Hi {{creator_name}},\n\nI've been following your {{creator_platform}} content and think your style could be a strong fit for an upcoming {{brand_name}} campaign.\n\nI'm {{your_name}} from {{brand_name}}. We're exploring a paid collaboration and would first like to understand your current pricing.\n\nCould you share your rate for one {{requested_deliverable}}? If you have a media kit or rate card, please feel free to include it, along with the currency and whether usage rights are included.\n\nNo commitment is needed at this stage — we're simply checking availability and rates. If this is not relevant, let me know and we will not follow up.\n\n{{your_name}} | {{brand_name}} Creator Partnerships",
+    "notes": "首封只询问当前报价、币种及基础授权信息；不得给出品牌预算、具体 offer 或承诺合作。"
   },
   {
     "template_id": "step02",
@@ -22,15 +22,15 @@
     "notes": "Nano(1.5k-5k)→300CNY/3kg；Micro(5k-50k)→500CNY/3-5kg；Mid/Macro(50k+)→800-1200CNY/5-10kg"
   },
   {
-    "template_id": "step02_followup",
-    "step": 2,
+    "template_id": "step01_followup",
+    "step": 1,
     "name_cn": "跟进（超1周未回复）",
     "name_en": "Follow-up (No Reply)",
     "tier": "all",
     "variant": "followup",
-    "subject": "Quick follow-up — collab opportunity from JoyaGoo",
-    "body": "Hi {{creator_name}},\n\nJust circling back on my previous email — I know your inbox gets busy!\n\nI reached out last week about a collaboration opportunity with JoyaGoo. I wanted to make sure this didn't get lost.\n\nQuick recap of what we offer:\n• Free shopping balance to order anything on joyagoo.com\n• Free international shipping on your haul\n• 5% ongoing commission on orders from your followers\n• Potential paid partnerships for top-performing creators\n\nRegistration link: {{affiliate_link}}\n\nEven a quick reply would be greatly appreciated — would love to explore this with you!\n\n{{your_name}} | JoyaGoo Team\nbiz@joyagoo.com",
-    "notes": "首次建联超1周无回复时发送，每个达人每次建联只进行一次followup。"
+    "subject": "Quick follow-up — paid collaboration rate inquiry",
+    "body": "Hi {{creator_name}},\n\nJust following up on my note from last week in case it got buried.\n\nCould you share your current rate for one {{requested_deliverable}}, plus your currency and any standard usage-rights terms? A rate card or media kit is also welcome.\n\nIf the timing is not right or this is not relevant, just let me know and we will close the loop.\n\n{{your_name}} | {{brand_name}} Creator Partnerships",
+    "notes": "首封发送 7 天后仍无回复时仅跟进一次；继续只询价，不提供具体 offer。"
   },
   {
     "template_id": "step02_declined",

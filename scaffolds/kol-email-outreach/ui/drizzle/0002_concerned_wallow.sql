@@ -1,0 +1,1 @@
+ALTER TABLE `send_batch_items` ADD `position` integer DEFAULT 0 NOT NULL;

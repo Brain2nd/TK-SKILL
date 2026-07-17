@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1784285644785,
+      "tag": "0000_majestic_loners",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784286603016,
+      "tag": "0001_light_malice",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784287309419,
+      "tag": "0002_concerned_wallow",
+      "breakpoints": true
+    }
+  ]
+}
