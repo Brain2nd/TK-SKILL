@@ -8,7 +8,7 @@ Layer 3 — calculate_score()    : weighted scoring of surviving candidates
 from config import (
     THRESHOLD_DAYS_SINCE_LAST_POST, THRESHOLD_FOLLOWERS_MIN,
     THRESHOLD_AVG_VIEWS, THRESHOLD_MAX_VIEWS, THRESHOLD_AVG_DURATION_MIN,
-    THRESHOLD_CONTENT_VERTICAL, THRESHOLD_VIRAL_RATE, THRESHOLD_AVG_COMMENTS,
+    THRESHOLD_CONTENT_VERTICAL, THRESHOLD_AVG_COMMENTS,
     THRESHOLD_COMMENT_RATE, THRESHOLD_AI_RELEVANCE, THRESHOLD_WESTERN_RATIO,
     THRESHOLD_VIEW_FOLLOWER_RATIO,
     THRESHOLD_FAKE_SCORE_MAX, THRESHOLD_TRUST_SCORE_MIN,
@@ -64,7 +64,6 @@ def must_pass_filter(features: dict) -> tuple[bool, str]:
     is_golf = "golf" in _cat or "高尔夫" in _cat
     ai_thresh = 0.3 if is_golf else THRESHOLD_AI_RELEVANCE
     comment_rate_thresh = 0.0003 if is_golf else THRESHOLD_COMMENT_RATE
-    comment_rate_thresh = 0.0003 if "golf" in (features.get("primary_category") or "").lower() else THRESHOLD_COMMENT_RATE
     checks = [
         (features["avg_comments"] >= THRESHOLD_AVG_COMMENTS,
          f"avg_comments={features['avg_comments']:.1f} < {THRESHOLD_AVG_COMMENTS}"),
@@ -135,6 +134,11 @@ def calculate_scores(candidates: list[dict]) -> None:
     if not candidates:
         return
 
+    # The function is intentionally safe to call again after a checkpoint reload.
+    # Without this reset, a second call would add weights to an existing score.
+    for candidate in candidates:
+        candidate["final_score"] = 0.0
+
     for feature_name, weight in WEIGHTS.items():
         raw_values = []
         for c in candidates:
@@ -143,6 +147,4 @@ def calculate_scores(candidates: list[dict]) -> None:
 
         normed = _normalize(raw_values)
         for c, nv in zip(candidates, normed):
-            if c.get("final_score") is None:
-                c["final_score"] = 0.0
             c["final_score"] += weight * nv

@@ -4,14 +4,22 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+node_modules/
+playwright-report/
 
 # API keys
 .env
 *.env
 
-# Output data (contains creator PII — do not commit)
-output/
+# Output data is intentionally published for this project. Creator emails in
+# these CSVs were taken from public bios/profile links at the user's request.
 *.csv
+!output/
+!output/**/*.csv
+
+# Local Claude Code permissions and credentials must never be published.
+.claude/
+.fastmoss-browser-profile/
 
 # macOS
 .DS_Store

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tiktok-kol-analyzer": {
+      "command": "/absolute/path/to/tikhub-kol-analyzer/run_mcp.sh",
+      "args": []
+    }
+  }
+}

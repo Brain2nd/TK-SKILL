@@ -1,28 +1,8 @@
 """
-Export results to CSV — two modes:
-
-export_csv(creators, path)          — legacy Creator-object export (run_from_list.py)
-export_scored_csv(candidates, path) — new pipeline dict export (main.py)
+Export scored pipeline results to CSV.
 """
 import csv
 import os
-from models import Creator
-
-# ── Legacy columns (Creator objects) ────────────────────────────────────────
-LEGACY_COLUMNS = [
-    "rank", "overall_pass",
-    "username", "nickname", "followers", "country", "bio",
-    "days_since_last_post", "preferred_recency",
-    "avg_views", "max_views", "viral_rate",
-    "avg_comments", "avg_comment_rate",
-    "ai_relevance_score", "ai_relevance_reason", "primary_category",
-    "audience_western_ratio", "audience_female_ratio", "comment_samples",
-    "top_country_1", "top_country_2", "top_country_3", "top_country_4", "top_country_5",
-    "fake_score", "trust_score", "fake_suspicious",
-    "A_recency", "B_followers", "C_views", "D_engagement",
-    "E_relevance", "F_demographics", "G_fake_views",
-    "all_hashtags",
-]
 
 # ── Scored pipeline columns (feature dicts) ──────────────────────────────────
 SCORED_COLUMNS = [
@@ -41,62 +21,6 @@ SCORED_COLUMNS = [
     "profile_url",
     "email", "instagram", "bio_url",
 ]
-
-
-def export_csv(creators: list[Creator], path: str) -> None:
-    """Legacy export — works with Creator objects. Used by run_from_list.py."""
-    _ensure_dir(path)
-    rows = []
-    for c in creators:
-        r = apply_all_filters(c)
-        rows.append({
-            "rank": "",
-            "overall_pass": "✅ PASS" if r["overall_pass"] else "❌ FAIL",
-            "username":  c.username,
-            "nickname":  c.nickname,
-            "followers": c.followers,
-            "country":   c.country or "N/A",
-            "bio":       c.bio.replace("\n", " "),
-            "days_since_last_post": c.days_since_last_post,
-            "preferred_recency": "⭐" if r["preferred_recency"] else "",
-            "avg_views":  f"{c.avg_views:,.0f}",
-            "max_views":  f"{c.max_views:,}",
-            "viral_rate": f"{c.viral_rate:.0%}",
-            "avg_comments":    f"{c.avg_comments:.1f}",
-            "avg_comment_rate": f"{c.avg_comment_rate:.3%}",
-            "ai_relevance_score":  f"{c.ai_relevance_score:.2f}" if c.ai_relevance_score is not None else "N/A",
-            "ai_relevance_reason": c.ai_relevance_reason or "",
-            "primary_category":    c.ai_primary_category or "",
-            "audience_western_ratio": f"{c.audience_western_ratio:.0%}" if c.audience_western_ratio is not None else "N/A",
-            "audience_female_ratio":  f"{c.audience_female_ratio:.0%}"  if c.audience_female_ratio  is not None else "N/A",
-            "comment_samples": c.comment_sample_size,
-            **{f"top_country_{i+1}": (
-                f"{c.audience_top_countries[i][0]}({c.audience_top_countries[i][1]})"
-                if i < len(c.audience_top_countries) else "")
-               for i in range(5)},
-            "fake_score":      f"{c.fake_score:.1f}"  if c.fake_score  is not None else "N/A",
-            "trust_score":     f"{c.trust_score}"     if c.trust_score is not None else "N/A",
-            "fake_suspicious": "⚠️" if c.fake_suspicious else "",
-            "A_recency":    "✅" if r["A_recency"]["passed"]    else "❌",
-            "B_followers":  "✅" if r["B_followers"]["passed"]  else "❌",
-            "C_views":      "✅" if r["C_views"]["passed"]      else "❌",
-            "D_engagement": "✅" if r["D_engagement"]["passed"] else "❌",
-            "E_relevance":  ("✅" if r["E_relevance"]["passed"] else
-                             "⏳" if r["E_relevance"]["passed"] is None else "❌"),
-            "F_demographics": ("⏭️" if r["F_demographics"].get("skipped") else
-                               "✅" if r["F_demographics"]["passed"] else "❌"),
-            "G_fake_views": ("⏭️" if r["G_fake_views"].get("skipped") else
-                             "✅" if r["G_fake_views"]["passed"] else "❌"),
-            "all_hashtags": " ".join(f"#{t}" for t in c.all_hashtags[:20]),
-        })
-
-    rows.sort(key=lambda r: (0 if "PASS" in r["overall_pass"] else 1, -int(r["followers"])))
-    for i, row in enumerate(rows, 1):
-        row["rank"] = i
-
-    _write_csv(rows, LEGACY_COLUMNS, path)
-    passed = sum(1 for row in rows if "PASS" in row["overall_pass"])
-    print(f"\n[Output] {passed} PASSED / {len(rows) - passed} FAILED → {path}")
 
 
 def export_scored_csv(candidates: list[dict], path: str) -> None:
