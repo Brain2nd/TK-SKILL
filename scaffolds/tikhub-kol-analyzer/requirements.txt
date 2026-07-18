@@ -2,3 +2,4 @@ anthropic>=0.40.0
 requests>=2.31.0
 openpyxl>=3.1.0      # for fetch_creator_features.py (Excel input)
 dnspython>=2.6.0     # MX-domain verification for public creator emails
+mcp>=1.0.0           # local KOL MCP server

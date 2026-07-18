@@ -182,11 +182,17 @@ def _parse_video(raw: dict) -> Video:
 
 def _parse_creator(aweme: dict, video_raws: list[dict]) -> Creator:
     author = aweme.get("author", {})
+    return creator_from_video_rows(author.get("unique_id", ""), video_raws)
+
+
+def creator_from_video_rows(username: str, video_raws: list[dict]) -> Creator:
+    """Build one Creator consistently from TikHub post rows."""
+    author = video_raws[0].get("author", {}) if video_raws else {}
     videos = [_parse_video(v) for v in video_raws]
     return Creator(
         user_id=author.get("uid", author.get("id", "")),
-        username=author.get("unique_id", ""),
-        nickname=author.get("nickname", ""),
+        username=author.get("unique_id") or username,
+        nickname=author.get("nickname") or username,
         followers=author.get("follower_count", 0),
         following=author.get("following_count", 0),
         bio=author.get("signature", ""),

@@ -1,0 +1,16 @@
+{
+  "name": "tikhub-kol-analyzer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "fastmoss:setup": "node fastmoss_browser.mjs --setup --setup-timeout 900",
+    "fastmoss:collect": "node fastmoss_browser.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.55.0"
+  }
+}

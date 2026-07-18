@@ -7,6 +7,12 @@ Configuration — set API keys via environment variables before running.
 Or create a .env file and load it with:  source .env
 """
 import os
+from pathlib import Path
+
+from env_loader import load_env_file
+
+
+load_env_file(Path(__file__).with_name(".env"))
 
 # === API Keys (read from environment — never hardcode here) ===
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", os.environ.get("CLAUDE_API_KEY", ""))

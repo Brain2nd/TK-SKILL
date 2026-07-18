@@ -25,16 +25,15 @@ import time
 from config import (
     LLM_API_KEY, TIKHUB_API_KEY,
     SEARCH_PAGES_PER_KEYWORD, SEARCH_RESULTS_PER_PAGE, VIDEOS_PER_USER,
-    COMMENTS_PER_VIDEO, COMMENT_SAMPLE_VIDEOS,
+    COMMENTS_PER_VIDEO,
     API_DELAY_SECONDS, DEEP_ANALYSIS_DELAY_SECONDS,
     OUTPUT_DIR,
 )
 from search_keywords import SEARCH_KEYWORDS
 from tikhub_fetcher import (
-    search_unique_usernames, fetch_user_videos, fetch_user_country,
-    detect_fake_views, fetch_bio_url, _parse_video, _parse_creator,
+    search_unique_usernames, fetch_user_videos,
+    creator_from_video_rows, detect_fake_views, fetch_bio_url,
 )
-from models import Creator
 from feature_engine import compute_basic_features
 from pipeline import hard_filter, must_pass_filter, calculate_scores
 from demographics import compute_western_ratio_from_ids
@@ -91,12 +90,20 @@ def main():
     parser.add_argument("--max",      type=int, default=0, help="Max creator pool size (0=unlimited)")
     parser.add_argument("--no-fake",  action="store_true", help="Skip fake-view detection")
     parser.add_argument("--resume",   action="store_true", help="Resume from checkpoint CSVs")
+    parser.add_argument("--runs", type=int, default=1,
+                        help="Repeat discovery and merge unique creators (default: 1)")
+    parser.add_argument("--interval", type=int, default=86400,
+                        help="Seconds between discovery rounds")
+    parser.add_argument("--pages", type=int, default=SEARCH_PAGES_PER_KEYWORD,
+                        help="Search pages per keyword and round")
     args = parser.parse_args()
 
     log.info("=== Dogegoo TikTok KOL Filter ===")
 
     if args.keyword and args.keywords:
         parser.error("use either --keyword or --keywords, not both")
+    if args.runs < 1 or args.interval < 0 or args.pages < 1:
+        parser.error("--runs and --pages must be >= 1; --interval must be >= 0")
 
     selected_keyword = args.keyword or (args.keywords[0] if args.keywords and len(args.keywords) == 1 else None)
     if args.output_dir:
@@ -126,11 +133,22 @@ def main():
             selected_keywords = {"custom": args.keywords}
         else:
             selected_keywords = {k: v for k, v in SEARCH_KEYWORDS.items() if k in args.tiers}
-        candidate_usernames = search_unique_usernames(
-            selected_keywords,
-            pages_per_keyword=SEARCH_PAGES_PER_KEYWORD,
-            results_per_page=SEARCH_RESULTS_PER_PAGE,
-        )
+        candidate_usernames = set()
+        for run in range(1, args.runs + 1):
+            found = search_unique_usernames(
+                selected_keywords,
+                pages_per_keyword=args.pages,
+                results_per_page=SEARCH_RESULTS_PER_PAGE,
+            )
+            new = found - candidate_usernames
+            candidate_usernames.update(found)
+            log.info(
+                "  Discovery round %s/%s: %s found, %s new, %s total",
+                run, args.runs, len(found), len(new), len(candidate_usernames),
+            )
+            if run < args.runs:
+                log.info("  Waiting %ss before next discovery round", args.interval)
+                time.sleep(args.interval)
         if args.max and len(candidate_usernames) > args.max:
             candidate_usernames = set(list(candidate_usernames)[: args.max])
         log.info(f"Phase 1 complete: {len(candidate_usernames)} unique creators")
@@ -165,18 +183,7 @@ def main():
                     time.sleep(API_DELAY_SECONDS)
                     continue
 
-                # Build Creator object for feature computation
-                author = video_raws[0].get("author", {})
-                videos = [_parse_video(v) for v in video_raws]
-                creator = Creator(
-                    user_id=author.get("uid", ""),
-                    username=author.get("unique_id", username),
-                    nickname=author.get("nickname", username),
-                    followers=author.get("follower_count", 0),
-                    following=author.get("following_count", 0),
-                    bio=author.get("signature", ""),
-                    videos=videos,
-                )
+                creator = creator_from_video_rows(username, video_raws)
 
                 features = compute_basic_features(creator)
                 passed, reason = hard_filter(features)

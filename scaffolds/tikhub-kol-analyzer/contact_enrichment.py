@@ -96,24 +96,53 @@ def fetch_public_page(url: str, timeout: int = 8, max_redirects: int = 3) -> str
 
 
 def verify_email_domain(email: str, timeout: float = 3.0) -> bool:
-    """Verify that the email domain publishes MX records; no SMTP probe is made."""
-    if not extract_email(email) or dns is None:
+    """Verify that the email domain publishes MX records; no SMTP probe is made.
+
+    Some agent runtimes block direct UDP/TCP DNS while allowing HTTPS. In that
+    case, fall back to DNS-over-HTTPS instead of incorrectly marking every
+    public address as unverified.
+    """
+    if not extract_email(email):
         return False
     domain = email.rsplit("@", 1)[1]
-    try:
-        resolver = dns.resolver.Resolver()
-        resolver.lifetime = timeout
-        return bool(resolver.resolve(domain, "MX"))
-    except Exception:
-        return False
+    if dns is not None:
+        try:
+            resolver = dns.resolver.Resolver()
+            resolver.lifetime = timeout
+            if resolver.resolve(domain, "MX"):
+                return True
+        except Exception:
+            pass
+    for endpoint in (
+        "https://cloudflare-dns.com/dns-query",
+        "https://dns.google/resolve",
+    ):
+        try:
+            response = requests.get(
+                endpoint,
+                params={"name": domain, "type": "MX"},
+                headers={"Accept": "application/dns-json"},
+                timeout=timeout,
+            )
+            payload = response.json() if response.ok else {}
+            if payload.get("Status") == 0 and any(
+                answer.get("type") == 15 and answer.get("data")
+                for answer in payload.get("Answer", [])
+            ):
+                return True
+        except (requests.RequestException, ValueError):
+            continue
+    return False
 
 
 def enrich_contact(row: dict, profile_payload=None, verify_dns: bool = True, scrape_link: bool = True) -> dict:
     """Add email, bio_url, email_source, and email_verified to a candidate row."""
     enriched = dict(row)
     bio = enriched.get("bio", "") or ""
-    email = extract_email(bio)
-    source = "bio" if email else ""
+    email = extract_email(enriched.get("email", "")) or extract_email(bio)
+    source = enriched.get("email_source", "") or (
+        enriched.get("source", "") if extract_email(enriched.get("email", "")) else "bio" if email else ""
+    )
 
     bio_url = enriched.get("bio_url", "") or extract_url(profile_payload)
     if not email and profile_payload:
