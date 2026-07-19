@@ -44,8 +44,11 @@ test("project UI delegates persistence and sending to server routes", async () =
   assert.match(page, /应用密码.*只写/s);
   assert.match(page, /AI 个性化配置/);
   assert.match(page, /AI 生成.*封审批邮件/);
+  assert.match(page, /导入达人/);
+  assert.match(page, /CSV、JSON 或 JSONL/);
   assert.doesNotMatch(page, /\bsendMail\s*\(/i);
   assert.match(workspaceRoute, /create_project/);
+  assert.match(workspaceRoute, /import_creators/);
   assert.doesNotMatch(workspaceRoute, /createPendingBatch/);
   assert.match(sendRoute, /personalizationRequestForProject/);
   assert.match(sendRoute, /personalize-batch/);

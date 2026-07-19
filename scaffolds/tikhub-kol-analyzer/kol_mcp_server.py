@@ -160,7 +160,19 @@ def read_discovery_results(output_dir: str, limit: int = 100) -> dict[str, Any]:
     if summary_path.exists():
         import json
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    return {"output_dir": str(out), "summary": summary, "rows": _read_csv(final_path, limit)}
+    rows = _read_csv(final_path, limit)
+    return {
+        "output_dir": str(out),
+        "summary": summary,
+        "rows": rows,
+        "outreach_handoff": {
+            "contract_version": "outreach-candidate.v1",
+            "candidates_file": str(final_path),
+            "format": "csv",
+            "row_count": len(rows),
+            "next_step": "Upload this file with the LOOP project's 导入达人 action.",
+        },
+    }
 
 
 @mcp.tool()
@@ -545,11 +557,18 @@ def run_shop_discovery(
     if not early_stop:
         args.append("--no-early-stop")
     result = _run_script("mass_discovery.py", args)
+    final_file = str(result.get("final_file") or (Path(output_dir).expanduser() / "final.csv"))
     return {
         **result,
         "platform": "tts",
         "source": "fastmoss",
         "tikhub_requests": 0,
+        "outreach_handoff": {
+            "contract_version": "outreach-candidate.v1",
+            "candidates_file": final_file,
+            "format": "csv",
+            "next_step": "Upload this file with the LOOP project's 导入达人 action.",
+        },
     }
 
 

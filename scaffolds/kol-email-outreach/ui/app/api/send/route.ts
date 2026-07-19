@@ -69,7 +69,12 @@ export async function GET(request: Request) {
     ]);
     return Response.json({
       ok: true,
-      gateway: { online: health.ok === true, error: health.error || "", circuit: health.circuit || { open: false }, ai: ai.ai },
+      operator: { email: owner, mode: owner.endsWith("@loop.local") ? "local" : "workspace" },
+      gateway: {
+        online: health.ok === true, error: health.error || "", circuit: health.circuit || { open: false }, ai: ai.ai,
+        oauth_providers: health.oauth_providers || { gmail_configured: false, outlook_configured: false },
+        credentials: health.credentials || "unavailable",
+      },
       runtime_senders: senders.senders || [],
       ...(await workspaceSnapshot(owner, projectId)),
     });

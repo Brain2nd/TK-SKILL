@@ -8,6 +8,8 @@
   "scripts": {
     "demo:data": "node scripts/generate-demo-data.mjs",
     "gateway": "node server/outreach-gateway.mjs",
+    "mvp:check": "node scripts/mvp-preflight.mjs",
+    "mvp": "node scripts/start-mvp.mjs",
     "predev": "node scripts/generate-demo-data.mjs",
     "dev": "vinext dev",
     "prebuild": "node scripts/generate-demo-data.mjs",

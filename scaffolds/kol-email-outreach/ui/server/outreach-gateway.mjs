@@ -933,7 +933,17 @@ async function route(req, res) {
   }
   if (req.method === "GET" && url.pathname === "/health") {
     const circuit = deliveryCircuitFrom(await journal.entries(), "");
-    return json(res, 200, { ok: true, service: "loop-outreach-gateway", circuit });
+    return json(res, 200, {
+      ok: true,
+      service: "loop-outreach-gateway",
+      mode: "local_operator",
+      circuit,
+      oauth_providers: {
+        gmail_configured: Boolean(String(process.env.LOOP_GOOGLE_OAUTH_CLIENT_ID || "").trim()),
+        outlook_configured: Boolean(String(process.env.LOOP_MICROSOFT_OAUTH_CLIENT_ID || "").trim()),
+      },
+      credentials: "memory_only",
+    });
   }
   if (req.method === "GET" && url.pathname === "/ai") {
     const ownerKey = String(url.searchParams.get("owner_key") || "").toLowerCase();

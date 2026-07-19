@@ -40,7 +40,9 @@ const projectStatus: Record<string, string> = {
   failed: "失败",
 };
 
-const batchStatus: Record<string, string> = { ...projectStatus, pending: "待审批" };
+const batchStatus: Record<string, string> = {
+  ...projectStatus, pending: "待审批", sent: "已发送", approved: "已批准", skipped_existing: "已跳过",
+};
 
 const traitLabels: Record<string, string> = {
   home_decor: "家居装饰", fashion: "时尚穿搭", beauty: "美妆", ugc_creator: "UGC 创作者",
@@ -175,6 +177,36 @@ function RecipientModal({ workspace, project, close, submit, busy }: any) {
   );
 }
 
+function ImportCreatorsModal({ project, close, submit, busy }: any) {
+  const [file, setFile] = useState<File | null>(null);
+  const [assignToProject, setAssignToProject] = useState(Boolean(project));
+  const projectLocked = project && ["queued", "sending", "paused", "failed", "completed", "delivery_unknown"].includes(project.status);
+  return (
+    <Modal title="导入达人画像结果" close={close}>
+      <form className="wizard import-form" onSubmit={async (event) => {
+        event.preventDefault();
+        if (!file) return;
+        const document = await file.text();
+        await submit({
+          action: "import_creators", filename: file.name, document,
+          project_id: project?.id || "", assign_to_project: Boolean(project && assignToProject && !projectLocked),
+        });
+        close();
+      }}>
+        <div className="import-intro"><b>支持画像MCP与常见达人表格</b><p>上传 CSV、JSON 或 JSONL。系统会自动识别账号、主页、邮箱、粉丝、均播、分类、简介和近期内容证据。</p></div>
+        <label className="file-drop">
+          <input type="file" accept=".csv,.json,.jsonl,application/json,text/csv" onChange={(event) => setFile(event.target.files?.[0] || null)} />
+          <span>{file ? file.name : "选择达人数据文件"}</span>
+          <small>{file ? `${Math.max(1, Math.round(file.size / 1024))} KB` : "单次最多 1,000 位达人，文件不超过 5 MB"}</small>
+        </label>
+        {project && <label className="check-label"><input type="checkbox" checked={assignToProject && !projectLocked} disabled={projectLocked} onChange={(event) => setAssignToProject(event.target.checked)} /><span>{projectLocked ? "该项目已有正式发送记录，只导入达人库" : `导入后直接加入「${project.name}」`}</span></label>}
+        <div className="import-rules"><span>自动处理</span><b>字段映射 · 邮箱校验 · 账号去重 · 内容证据保留</b><small>缺少有效账号或联系邮箱的行不会导入，并会返回具体原因。</small></div>
+        <footer className="modal-actions"><button type="button" className="secondary-button" onClick={close}>取消</button><button className="primary-button" disabled={busy || !file || Number(file?.size || 0) > 5_000_000}>{busy ? "正在导入…" : "校验并导入"}</button></footer>
+      </form>
+    </Modal>
+  );
+}
+
 function ProjectWorkspace({ workspace, project, busy, postWorkspace, openRecipients, openApprovals }: any) {
   const [name, setName] = useState(project.name);
   const [brand, setBrand] = useState(project.brand_name);
@@ -251,10 +283,11 @@ function ProjectWorkspace({ workspace, project, busy, postWorkspace, openRecipie
   );
 }
 
-function ProjectCenter({ workspace, project, busy, postWorkspace, selectProject, openCreate, openRecipients, openApprovals }: any) {
+function ProjectCenter({ workspace, project, busy, postWorkspace, selectProject, openCreate, openImport, openRecipients, openApprovals, importSummary, clearImportSummary }: any) {
   return (
     <>
-      <div className="page-heading"><div><p className="eyebrow">CAMPAIGN PROJECTS</p><h1>首次建联项目中心</h1><p className="lede">每个项目独立管理达人名单、发送数量、英文模板、发件邮箱和审批批次。</p></div><button className="primary-button" onClick={openCreate}>＋ 新建项目</button></div>
+      <div className="page-heading"><div><p className="eyebrow">CAMPAIGN PROJECTS</p><h1>首次建联项目中心</h1><p className="lede">每个项目独立管理达人名单、发送数量、英文模板、发件邮箱和审批批次。</p></div><div className="heading-actions"><button className="secondary-button" onClick={openImport}>导入达人</button><button className="primary-button" onClick={openCreate}>＋ 新建项目</button></div></div>
+      {importSummary && <section className="panel import-summary"><div><Pill tone={importSummary.rejected?.length ? "amber" : "green"}>导入完成</Pill><b>{importSummary.imported} 位达人已进入达人库</b><small>新增 {importSummary.created} · 更新 {importSummary.updated} · 加入当前项目 {importSummary.added_to_project}</small>{importSummary.rejected?.length > 0 && <p>{importSummary.rejected.slice(0, 3).map((item: any) => `第 ${item.row_number} 行：${item.reason}`).join("；")}{importSummary.rejected.length > 3 ? `；另有 ${importSummary.rejected.length - 3} 行` : ""}</p>}</div><button className="text-button" onClick={clearImportSummary}>关闭</button></section>}
       <div className="project-strip">{workspace.projects.map((item: any) => <ProjectCard key={item.id} project={item} active={item.id === project?.id} select={() => selectProject(item.id)}/>)}</div>
       {project ? <ProjectWorkspace key={project.id} workspace={workspace} project={project} busy={busy} postWorkspace={postWorkspace} openRecipients={openRecipients} openApprovals={openApprovals}/> : <Empty title="还没有项目" text="新建一个项目并分配达人，系统会为每个项目独立记录发送状态。" />}
     </>
@@ -441,8 +474,13 @@ function SenderAccounts({ workspace, busy, postSend }: any) {
   );
 }
 
-function Replies() {
-  return <><div className="page-heading"><div><p className="eyebrow">INBOX MONITOR</p><h1>回复与报价</h1><p className="lede">回复系统只会匹配已经发送并有稳定 Message-ID 的线程。</p></div><Pill tone="neutral">尚未连接 IMAP</Pill></div><section className="reply-kpis"><div><span>已匹配回复</span><strong>0</strong><small>等待真实线程</small></div><div><span>合作意向</span><strong>0</strong><small>尚无分类结果</small></div><div><span>报价入库</span><strong>0</strong><small>CRM 写入关闭</small></div><div><span>自动跟进</span><strong>0</strong><small>固定报价项目已禁用</small></div></section><Empty title="暂时没有真实回复" text="真实发送完成后，回复才能按 Message-ID 关联到项目和达人。" /></>;
+function Replies({ workspace, project }: any) {
+  const items = project ? workspace.batch_items : [];
+  const sent = items.filter((item: any) => item.status === "sent");
+  const failed = items.filter((item: any) => item.status === "failed");
+  const unknown = items.filter((item: any) => item.status === "delivery_unknown");
+  const resultItems = items.filter((item: any) => ["sent", "failed", "delivery_unknown", "skipped_existing"].includes(item.status));
+  return <><div className="page-heading"><div><p className="eyebrow">DELIVERY & REPLIES</p><h1>发送结果与回复</h1><p className="lede">先确认每封首联的实际发送结果；回复同步只匹配带稳定 Message-ID 的邮件线程。</p></div><Pill tone="amber">回复同步待启用</Pill></div><section className="reply-kpis"><div><span>已发送</span><strong className="text-green">{sent.length}</strong><small>服务商已接受</small></div><div><span>发送失败</span><strong>{failed.length}</strong><small>可查看失败原因</small></div><div><span>投递未知</span><strong className={unknown.length ? "danger-text" : ""}>{unknown.length}</strong><small>出现即暂停队列</small></div><div><span>已匹配回复</span><strong>0</strong><small>需启用收件权限</small></div></section>{unknown.length > 0 && <section className="critical-banner"><b>存在无法确认的投递结果</b><p>请先检查发件箱或邮件服务商记录，不要重新发送。</p></section>}{resultItems.length ? <section className="panel delivery-results"><div className="section-title-row compact"><div><p className="eyebrow">MESSAGE RESULTS</p><h2>{project?.name} · 每封邮件结果</h2></div><span>{resultItems.length} 条</span></div><div className="table-wrap"><table><thead><tr><th>达人</th><th>收件邮箱</th><th>发送状态</th><th>发送时间</th><th>结果依据</th></tr></thead><tbody>{resultItems.map((item: any) => <tr key={item.id}><td><div className="creator-cell"><Avatar name={item.handle}/><div><b>@{item.handle}</b><small>{item.subject}</small></div></div></td><td><span className="email-cell">{item.recipient_email}</span></td><td><Pill tone={statusTone(item.status)}>{batchStatus[item.status] || item.status}</Pill></td><td><small>{item.sent_at ? new Date(item.sent_at).toLocaleString("zh-CN", { hour12: false }) : "—"}</small></td><td><small className={item.status === "delivery_unknown" ? "danger-text" : ""}>{item.message_id || item.last_error || "已记录"}</small></td></tr>)}</tbody></table></div></section> : <Empty title="还没有正式发送结果" text="邮件通过审批并正式发送后，这里会展示每封邮件的状态、时间、Message-ID和失败原因。" />}</>;
 }
 
 function Safety({ workspace }: any) {
@@ -454,7 +492,13 @@ function Safety({ workspace }: any) {
     ["未知投递熔断", "网络结果不明确时立即暂停，绝不自动重试"],
     ["凭据只写", "OAuth 令牌和应用密码不进入项目数据库、不回显、不写审计日志"],
   ];
-  return <><div className="page-heading"><div><p className="eyebrow">GUARDRAILS / AUDIT</p><h1>安全门禁与审计</h1><p className="lede">项目管理不会绕开首次建联 Agent 的幂等、额度、稳定 Message-ID、运行锁和全局熔断。</p></div><Pill tone={workspace.gateway?.circuit?.open ? "red" : "green"}>{workspace.gateway?.circuit?.open ? "全局熔断已打开" : "外发熔断器正常"}</Pill></div>{workspace.gateway?.circuit?.open && <section className="critical-banner"><b>禁止继续发送</b><p>{workspace.gateway.circuit.reason || "存在未解决的投递结果"}</p></section>}<section className="safety-grid">{controls.map(([title, text], index) => <article className="panel safety-card" key={title}><span className="safety-index">0{index + 1}</span><div><h2>{title}</h2><p>{text}</p></div><Pill tone="green">ACTIVE</Pill></article>)}</section><section className="panel audit-stream"><div className="section-title-row compact"><div><p className="eyebrow">AUDIT EVENTS</p><h2>最近项目事件</h2></div><code>D1 append-only view</code></div>{workspace.audit_events.map((event: any) => <div className="audit-row" key={event.id}><time>{new Date(event.created_at).toLocaleString("zh-CN", { hour12: false })}</time><span className="event-dot"></span><b>{event.event_type}</b><code>{event.entity_id}</code></div>)}</section></>;
+  const readiness = [
+    ["项目数据", true, "已启用持久化与用户隔离"],
+    ["发送网关", workspace.gateway?.online, workspace.gateway?.online ? "本地网关在线" : "启动 npm run mvp"],
+    ["AI个性化", workspace.gateway?.ai?.configured, workspace.gateway?.ai?.configured ? "当前会话已配置" : "需在邮箱账户页配置"],
+    ["发件邮箱", workspace.runtime_senders?.some((sender: any) => sender.verified), workspace.runtime_senders?.some((sender: any) => sender.verified) ? "至少一个邮箱已验证" : "尚无已验证邮箱"],
+  ];
+  return <><div className="page-heading"><div><p className="eyebrow">GUARDRAILS / AUDIT</p><h1>安全门禁与审计</h1><p className="lede">项目管理不会绕开首次建联 Agent 的幂等、额度、稳定 Message-ID、运行锁和全局熔断。</p></div><Pill tone={workspace.gateway?.circuit?.open ? "red" : "green"}>{workspace.gateway?.circuit?.open ? "全局熔断已打开" : "外发熔断器正常"}</Pill></div><section className="readiness-grid">{readiness.map(([title, ready, detail]) => <article className="panel readiness-card" key={String(title)}><Pill tone={ready ? "green" : "amber"}>{ready ? "READY" : "SETUP"}</Pill><b>{title}</b><small>{detail}</small></article>)}</section>{workspace.gateway?.circuit?.open && <section className="critical-banner"><b>禁止继续发送</b><p>{workspace.gateway.circuit.reason || "存在未解决的投递结果"}</p></section>}<section className="safety-grid">{controls.map(([title, text], index) => <article className="panel safety-card" key={title}><span className="safety-index">0{index + 1}</span><div><h2>{title}</h2><p>{text}</p></div><Pill tone="green">ACTIVE</Pill></article>)}</section><section className="panel audit-stream"><div className="section-title-row compact"><div><p className="eyebrow">AUDIT EVENTS</p><h2>最近项目事件</h2></div><code>D1 append-only view</code></div>{workspace.audit_events.map((event: any) => <div className="audit-row" key={event.id}><time>{new Date(event.created_at).toLocaleString("zh-CN", { hour12: false })}</time><span className="event-dot"></span><b>{event.event_type}</b><code>{event.entity_id}</code></div>)}</section></>;
 }
 
 export default function Home() {
@@ -463,7 +507,9 @@ export default function Home() {
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
+  const [lastImportSummary, setLastImportSummary] = useState<any>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [showRecipients, setShowRecipients] = useState(false);
   const [job, setJob] = useState<any>(null);
 
@@ -501,7 +547,9 @@ export default function Home() {
       setWorkspace(result);
       if (result.selected_project_id) setSelectedProjectId(result.selected_project_id);
       if (result.job) setJob(result.job);
-      setNotice({ tone: "success", text: "操作已完成" });
+      const summary = result.import_summary;
+      if (summary) setLastImportSummary(summary);
+      setNotice({ tone: "success", text: summary ? `已导入 ${summary.imported} 位达人${summary.added_to_project ? `，其中 ${summary.added_to_project} 位已加入项目` : ""}${summary.rejected?.length ? `；${summary.rejected.length} 行未通过校验` : ""}` : "操作已完成" });
       return result;
     } catch (error: any) {
       setNotice({ tone: "error", text: error.message });
@@ -530,11 +578,11 @@ export default function Home() {
   if (!workspace) return <main className="loading-screen"><div className="brand-mark"><span></span><span></span><span></span></div><b>正在读取项目工作台…</b><small>本地 D1 与安全发送网关</small>{notice && <p>{notice.text}</p>}</main>;
 
   const content = view === "projects"
-    ? <ProjectCenter workspace={workspace} project={project} busy={busy} postWorkspace={postWorkspace} selectProject={selectProject} openCreate={() => setShowCreate(true)} openRecipients={() => setShowRecipients(true)} openApprovals={() => setView("approvals")}/>
+    ? <ProjectCenter workspace={workspace} project={project} busy={busy} postWorkspace={postWorkspace} selectProject={selectProject} openCreate={() => setShowCreate(true)} openImport={() => setShowImport(true)} openRecipients={() => setShowRecipients(true)} openApprovals={() => setView("approvals")} importSummary={lastImportSummary} clearImportSummary={() => setLastImportSummary(null)}/>
     : view === "approvals"
       ? <Approvals key={`${project?.id}-${latestBatch?.id || "none"}-${latestBatch?.status || "empty"}`} workspace={workspace} project={project} busy={busy} postWorkspace={postWorkspace} postSend={postSend} job={job}/>
       : view === "replies"
-        ? <Replies />
+        ? <Replies workspace={workspace} project={project}/>
         : view === "senders"
           ? <SenderAccounts workspace={workspace} busy={busy} postSend={postSend}/>
           : <Safety workspace={workspace}/>;
@@ -547,7 +595,7 @@ export default function Home() {
         <nav aria-label="主导航">{navItems.map((item) => <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => setView(item.id)}><span>{item.icon}</span>{item.label}{item.id === "approvals" && latestBatch && <em>{latestBatch.item_count}</em>}</button>)}</nav>
         <div className="sidebar-spacer"></div>
         <div className="sandbox-card"><Pill tone={workspace.gateway?.online ? "green" : "red"}>{workspace.gateway?.online ? "LOCAL GATEWAY" : "GATEWAY OFFLINE"}</Pill><p>{project?.name || "未选择项目"}</p><small>{workspace.gateway?.circuit?.open ? "外发已熔断" : "默认先审批，再正式入队"}</small></div>
-        <div className="operator"><Avatar name="Vira" tone="blue"/><div><b>本地操作员</b><small>Project Manager</small></div><button aria-label="更多" disabled>•••</button></div>
+        <div className="operator"><Avatar name={workspace.operator?.email || "Vira"} tone="blue"/><div><b>{workspace.operator?.mode === "workspace" ? "已登录操作员" : "本地操作员"}</b><small>{workspace.operator?.email || "Project Manager"}</small></div><button aria-label="更多" disabled>•••</button></div>
       </aside>
       <section className="workspace">
         <header className="topbar"><div className="breadcrumb"><span>Projects</span><i>/</i><b>{project?.name || "项目中心"}</b></div><div className="topbar-right"><div className="test-chip"><span>✓</span>{workspace.projects.length} 个项目</div><div className="clock"><span className={`pulse small ${workspace.gateway?.online ? "" : "offline"}`}></span>{workspace.gateway?.online ? "发送网关在线" : "仅项目管理"}</div></div></header>
@@ -555,6 +603,7 @@ export default function Home() {
         <div className="page-content" key={`${view}-${project?.id || "none"}`}>{content}</div>
       </section>
       {showCreate && <CreateProjectModal workspace={workspace} close={() => setShowCreate(false)} submit={postWorkspace} busy={busy}/>}
+      {showImport && <ImportCreatorsModal project={project} close={() => setShowImport(false)} submit={postWorkspace} busy={busy}/>}
       {showRecipients && project && <RecipientModal workspace={workspace} project={project} close={() => setShowRecipients(false)} submit={postWorkspace} busy={busy}/>}
     </main>
   );

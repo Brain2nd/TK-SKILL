@@ -107,7 +107,9 @@ async function ensureSchema() {
       country TEXT NOT NULL DEFAULT '', city TEXT NOT NULL DEFAULT '', followers INTEGER NOT NULL DEFAULT 0,
       avg_views INTEGER NOT NULL DEFAULT 0, engagement_rate REAL NOT NULL DEFAULT 0,
       traits_json TEXT NOT NULL DEFAULT '[]', review_warnings_json TEXT NOT NULL DEFAULT '[]',
-      bio TEXT NOT NULL DEFAULT '', default_hook TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      bio TEXT NOT NULL DEFAULT '', default_hook TEXT NOT NULL DEFAULT '', evidence_json TEXT NOT NULL DEFAULT '[]',
+      source TEXT NOT NULL DEFAULT '', source_updated_at TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
     `CREATE UNIQUE INDEX IF NOT EXISTS creators_platform_handle_uq ON creators(platform, handle)`,
     `CREATE INDEX IF NOT EXISTS creators_country_idx ON creators(country)`,
@@ -176,6 +178,16 @@ async function ensureSchema() {
   if (!(senderColumns.results || []).some((column: any) => column.name === "auth_mode")) {
     await db.prepare("ALTER TABLE sender_accounts ADD COLUMN auth_mode TEXT NOT NULL DEFAULT 'smtp'").run();
   }
+  const creatorColumns = await db.prepare("PRAGMA table_info(creators)").all();
+  if (!(creatorColumns.results || []).some((column: any) => column.name === "evidence_json")) {
+    await db.prepare("ALTER TABLE creators ADD COLUMN evidence_json TEXT NOT NULL DEFAULT '[]'").run();
+  }
+  if (!(creatorColumns.results || []).some((column: any) => column.name === "source")) {
+    await db.prepare("ALTER TABLE creators ADD COLUMN source TEXT NOT NULL DEFAULT ''").run();
+  }
+  if (!(creatorColumns.results || []).some((column: any) => column.name === "source_updated_at")) {
+    await db.prepare("ALTER TABLE creators ADD COLUMN source_updated_at TEXT NOT NULL DEFAULT ''").run();
+  }
 }
 
 async function audit(ownerEmail: string, projectId: string, entityType: string, entityId: string, eventType: string, details: unknown = {}) {
@@ -193,14 +205,15 @@ async function seedDemo(ownerEmail: string) {
     return db.prepare(
       `INSERT OR IGNORE INTO creators (
         id, platform, handle, display_name, profile_url, contact_email, country, city, followers, avg_views,
-        engagement_rate, traits_json, review_warnings_json, bio, default_hook
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        engagement_rate, traits_json, review_warnings_json, bio, default_hook, evidence_json, source, source_updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       creator.candidate_id, "tiktok", creator.username, creator.display_name || `@${creator.username}`,
       creator.profile_url || `https://www.tiktok.com/@${creator.username}`, normalizeEmail(creator.email),
       creator.country || "ES", creator.city || "西班牙", Number(creator.followers || 0), Number(creator.avg_views || 0),
       Number(creator.engagement_rate || 0), JSON.stringify(creator.personalization_traits || []),
       JSON.stringify(creator.review_warnings || result.review_warnings || []), creator.bio || "", hook,
+      JSON.stringify(result.creator_profile?.recent_videos || []), "demo_snapshot", String(demoData.generated_at || ""),
     );
   });
   if (creatorStatements.length) await db.batch(creatorStatements);
@@ -305,6 +318,7 @@ export async function workspaceSnapshot(ownerEmail: string, projectId = "") {
       engagement_rate: Number(row.engagement_rate || 0),
       traits: parseJson(row.traits_json),
       review_warnings: parseJson(row.review_warnings_json),
+      evidence: parseJson(row.evidence_json),
     })),
     senders: (senderRows.results || []).map((row: any) => ({ ...row, secure: Boolean(row.secure), is_enabled: Boolean(row.is_enabled) })),
     recipients: (recipientRows.results || []).map((row: any) => ({
@@ -312,6 +326,7 @@ export async function workspaceSnapshot(ownerEmail: string, projectId = "") {
       followers: Number(row.followers || 0), avg_views: Number(row.avg_views || 0),
       engagement_rate: Number(row.engagement_rate || 0), traits: parseJson(row.traits_json),
       review_warnings: parseJson(row.review_warnings_json),
+      evidence: parseJson(row.evidence_json),
     })),
     batches: (batchRows.results || []).map((row: any) => ({
       ...row,
@@ -434,6 +449,98 @@ export async function setProjectRecipients(ownerEmail: string, input: any) {
   await audit(ownerEmail, project.id, "project", project.id, "project.recipients_updated", { recipients: creatorIds.length });
 }
 
+export async function importCreators(ownerEmail: string, input: any) {
+  await initializeWorkspace(ownerEmail);
+  const candidates = Array.isArray(input.candidates) ? input.candidates : [];
+  if (!candidates.length || candidates.length > 1000) throw new Error("每次必须导入 1–1000 位达人");
+  const db = database();
+  const existingRows = await db.prepare("SELECT id, platform, handle FROM creators").all();
+  const byAccount = new Map<string, any>((existingRows.results || []).map((row: any) => [`${row.platform}:${row.handle}`, row]));
+  const byId = new Map<string, any>((existingRows.results || []).map((row: any) => [String(row.id), row]));
+  const resolved = [];
+  let updated = 0;
+  for (const candidate of candidates) {
+    const platform = String(candidate.platform || "tiktok").trim().toLowerCase();
+    const handle = String(candidate.handle || "").trim().replace(/^@/, "").toLowerCase();
+    const requestedId = String(candidate.id || `${platform}:${handle}`).trim();
+    const email = normalizeEmail(candidate.contact_email);
+    if (!/^[a-z0-9._-]{2,80}$/i.test(handle) || !email || !requestedId || requestedId.length > 180 || /[\r\n\t]/.test(requestedId)) {
+      throw new Error("导入数据在保存前校验失败");
+    }
+    const accountKey = `${platform}:${handle}`;
+    const existingAccount = byAccount.get(accountKey);
+    const existingId = byId.get(requestedId);
+    if (existingId && `${existingId.platform}:${existingId.handle}` !== accountKey) {
+      throw new Error(`达人稳定 ID ${requestedId} 已属于其他账号`);
+    }
+    if (existingAccount) updated += 1;
+    const value = { ...candidate, id: String(existingAccount?.id || requestedId), platform, handle, contact_email: email };
+    byAccount.set(accountKey, value);
+    byId.set(value.id, value);
+    resolved.push(value);
+  }
+  const statements = resolved.map((candidate) => db.prepare(
+    `INSERT INTO creators (
+      id, platform, handle, display_name, profile_url, contact_email, country, city, followers, avg_views,
+      engagement_rate, traits_json, review_warnings_json, bio, default_hook, evidence_json, source, source_updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(platform, handle) DO UPDATE SET
+      display_name = CASE WHEN excluded.display_name != '' THEN excluded.display_name ELSE creators.display_name END,
+      profile_url = CASE WHEN excluded.profile_url != '' THEN excluded.profile_url ELSE creators.profile_url END,
+      contact_email = excluded.contact_email,
+      country = CASE WHEN excluded.country != '' THEN excluded.country ELSE creators.country END,
+      city = CASE WHEN excluded.city != '' THEN excluded.city ELSE creators.city END,
+      followers = CASE WHEN excluded.followers > 0 THEN excluded.followers ELSE creators.followers END,
+      avg_views = CASE WHEN excluded.avg_views > 0 THEN excluded.avg_views ELSE creators.avg_views END,
+      engagement_rate = CASE WHEN excluded.engagement_rate > 0 THEN excluded.engagement_rate ELSE creators.engagement_rate END,
+      traits_json = CASE WHEN excluded.traits_json != '[]' THEN excluded.traits_json ELSE creators.traits_json END,
+      review_warnings_json = CASE WHEN excluded.review_warnings_json != '[]' THEN excluded.review_warnings_json ELSE creators.review_warnings_json END,
+      bio = CASE WHEN excluded.bio != '' THEN excluded.bio ELSE creators.bio END,
+      default_hook = CASE WHEN excluded.default_hook != '' THEN excluded.default_hook ELSE creators.default_hook END,
+      evidence_json = CASE WHEN excluded.evidence_json != '[]' THEN excluded.evidence_json ELSE creators.evidence_json END,
+      source = excluded.source, source_updated_at = excluded.source_updated_at`,
+  ).bind(
+    candidate.id, candidate.platform, candidate.handle, String(candidate.display_name || `@${candidate.handle}`).slice(0, 160),
+    String(candidate.profile_url || "").slice(0, 500), candidate.contact_email, String(candidate.country || "").slice(0, 60),
+    String(candidate.city || "").slice(0, 100), Math.max(0, Number(candidate.followers || 0)),
+    Math.max(0, Number(candidate.avg_views || 0)), Math.max(0, Number(candidate.engagement_rate || 0)),
+    JSON.stringify(Array.isArray(candidate.traits) ? candidate.traits : []),
+    JSON.stringify(Array.isArray(candidate.review_warnings) ? candidate.review_warnings : []),
+    String(candidate.bio || "").slice(0, 1000), String(candidate.default_hook || "").slice(0, 240),
+    JSON.stringify(Array.isArray(candidate.evidence) ? candidate.evidence : []), String(candidate.source || "manual_import").slice(0, 100),
+    String(candidate.source_updated_at || now()).slice(0, 40),
+  ));
+  for (let index = 0; index < statements.length; index += 50) await db.batch(statements.slice(index, index + 50));
+  await audit(ownerEmail, String(input.project_id || ""), "creator_import", id("import"), "creators.imported", {
+    filename: String(input.filename || "").slice(0, 180), accepted: resolved.length, created: resolved.length - updated,
+    updated, rejected: Number(input.rejected_count || 0), contract_version: "outreach-candidate.v1",
+  });
+  return { creator_ids: resolved.map((candidate) => candidate.id), imported: resolved.length, created: resolved.length - updated, updated };
+}
+
+export async function addProjectRecipients(ownerEmail: string, projectId: string, creatorIdsInput: string[]) {
+  const project = await projectForOwner(ownerEmail, projectId);
+  await assertProjectEditable(project.id);
+  const creatorIds = [...new Set((creatorIdsInput || []).map(String))];
+  if (!creatorIds.length) return 0;
+  await invalidateDraftBatches(project.id);
+  const db = database();
+  const selected = await db.prepare(`SELECT id, default_hook FROM creators WHERE id IN (${creatorIds.map(() => "?").join(",")})`).bind(...creatorIds).all();
+  if ((selected.results || []).length !== creatorIds.length) throw new Error("导入结果包含不存在的达人");
+  const current = await db.prepare("SELECT creator_id, position FROM project_recipients WHERE project_id = ? ORDER BY position").bind(project.id).all();
+  const existing = new Set((current.results || []).map((row: any) => String(row.creator_id)));
+  const byId = new Map((selected.results || []).map((row: any) => [String(row.id), row]));
+  const additions = creatorIds.filter((creatorId) => !existing.has(creatorId));
+  const start = (current.results || []).reduce((maximum: number, row: any) => Math.max(maximum, Number(row.position || 0) + 1), 0);
+  if (additions.length) await db.batch(additions.map((creatorId, offset) => db.prepare(
+    "INSERT INTO project_recipients (id, project_id, creator_id, personalized_hook, status, position, created_at, updated_at) VALUES (?, ?, ?, ?, 'selected', ?, ?, ?)",
+  ).bind(id("pr"), project.id, creatorId, (byId.get(creatorId) as any)?.default_hook || "", start + offset, now(), now())));
+  const count = await db.prepare("SELECT COUNT(*) AS count FROM project_recipients WHERE project_id = ?").bind(project.id).first<any>();
+  await db.prepare("UPDATE projects SET target_count = ?, status = 'draft', updated_at = ? WHERE id = ? AND owner_email = ?").bind(Number(count?.count || 0), now(), project.id, ownerEmail).run();
+  await audit(ownerEmail, project.id, "project", project.id, "project.imported_recipients_added", { added: additions.length });
+  return additions.length;
+}
+
 export async function setRecipientSender(ownerEmail: string, input: any) {
   const project = await projectForOwner(ownerEmail, String(input.project_id || ""));
   await assertProjectEditable(project.id);
@@ -512,7 +619,7 @@ async function personalizationStateForProject(ownerEmail: string, projectId: str
   await assertProjectEditable(project.id);
   const db = database();
   const rows = await db.prepare(
-    `SELECT pr.*, c.handle, c.contact_email, c.review_warnings_json, c.bio, c.traits_json,
+    `SELECT pr.*, c.handle, c.contact_email, c.review_warnings_json, c.bio, c.traits_json, c.evidence_json,
       c.city, c.country, c.followers, c.avg_views, c.engagement_rate, c.default_hook,
       COALESCE(NULLIF(pr.sender_override_id, ''), p.default_sender_id) AS resolved_sender_id,
       s.from_name, s.from_email, s.reply_to_email, s.verification_status, s.is_enabled
@@ -544,6 +651,7 @@ async function personalizationStateForProject(ownerEmail: string, projectId: str
     },
     recipients: (recipients as any[]).map((row) => {
       const traits = parseJson(row.traits_json, []);
+      const evidence = parseJson(row.evidence_json, []);
       const styleParts = [
         ...(Array.isArray(traits) ? traits.map(String) : []),
         row.city ? `city:${row.city}` : "",
@@ -554,9 +662,9 @@ async function personalizationStateForProject(ownerEmail: string, projectId: str
         handle: String(row.handle || ""),
         bio: String(row.bio || ""),
         style_summary: styleParts.join(", "),
-        recent_videos: [],
+        recent_videos: Array.isArray(evidence) ? evidence : [],
         base_hook: String(row.personalized_hook || row.default_hook || ""),
-        base_evidence_ids: [],
+        base_evidence_ids: Array.isArray(evidence) ? evidence.map((item: any) => String(item?.id || "")).filter(Boolean) : [],
       };
     }),
   };
@@ -579,6 +687,7 @@ async function personalizationStateForProject(ownerEmail: string, projectId: str
       reply_to_email: row.reply_to_email || "",
       bio: row.bio || "",
       traits_json: row.traits_json || "[]",
+      evidence_json: row.evidence_json || "[]",
       city: row.city || "",
       country: row.country || "",
       base_hook: row.personalized_hook || row.default_hook || "",

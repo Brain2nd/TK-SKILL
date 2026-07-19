@@ -38,6 +38,9 @@ export const creators = sqliteTable("creators", {
   reviewWarningsJson: text("review_warnings_json").notNull().default("[]"),
   bio: text("bio").notNull().default(""),
   defaultHook: text("default_hook").notNull().default(""),
+  evidenceJson: text("evidence_json").notNull().default("[]"),
+  source: text("source").notNull().default(""),
+  sourceUpdatedAt: text("source_updated_at").notNull().default(""),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   uniqueIndex("creators_platform_handle_uq").on(table.platform, table.handle),
