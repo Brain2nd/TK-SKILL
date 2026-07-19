@@ -4,6 +4,7 @@
     "allow": [
       "mcp__creator-search__get_creator_search_access",
       "mcp__creator-search__collect_fastmoss_candidates",
+      "mcp__creator-search__continue_fastmoss_after_verification",
       "mcp__creator-search__harvest_fastmoss_emails",
       "mcp__creator-search__merge_fastmoss_csvs",
       "mcp__creator-search__get_runtime_status"

@@ -111,6 +111,33 @@ class BrowserDomTests(unittest.TestCase):
         self.assertTrue(self.scraper._fill_ant_select_keyword(self.page, "belleza"))
         self.assertEqual(self.page.locator("#selected").inner_text(), "belleza")
 
+    def test_next_page_confirms_active_page_changed(self) -> None:
+        self.page.set_content("""
+            <ul class="ant-pagination">
+              <li class="ant-pagination-item ant-pagination-item-active">1</li>
+              <li class="ant-pagination-next"><button>Next</button></li>
+            </ul>
+            <script>
+              document.querySelector('.ant-pagination-next button').onclick = () => {
+                document.querySelector('.ant-pagination-item-active').textContent = '2';
+              };
+            </script>
+        """)
+        self.assertTrue(self.scraper._next_page(self.page))
+        self.assertEqual(
+            self.page.locator(".ant-pagination-item-active").inner_text(), "2"
+        )
+
+    def test_next_page_rejects_click_without_page_change(self) -> None:
+        self.page.set_content("""
+            <ul class="ant-pagination">
+              <li class="ant-pagination-item ant-pagination-item-active">1</li>
+              <li class="ant-pagination-next"><button>Next</button></li>
+            </ul>
+        """)
+        self.scraper.timeout_ms = 100
+        self.assertFalse(self.scraper._next_page(self.page))
+
 
 if __name__ == "__main__":
     unittest.main()

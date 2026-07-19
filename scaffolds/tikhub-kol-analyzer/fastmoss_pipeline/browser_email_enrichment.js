@@ -1,4 +1,4 @@
-// === FastMoss ES Email Harvester v4 — fixed MD5 + correct response parsing ===
+// Fixed browser-context email enrichment script.
 (function() {
 var SALT = 'LAA6edGHBkcc3eTiOIRfg89bu9ODA6PB';
 
@@ -64,7 +64,15 @@ function extractEmail(data) {
 }
 
 // ===== MAIN =====
-(async function() {
+window.__emailPromise = (async function() {
+  var config = Object.freeze(Object.assign({
+    region: 'ES',
+    minDelayMs: 2000,
+    maxDelayMs: 3000,
+    maxEmails: 0,
+    download: true,
+    outputName: 'fastmoss_emails.json'
+  }, window.__fmEmailConfig || {}));
   var candidates = window.__candidates || [];
   if (!candidates.length) {
     console.error('No candidates. Run collector/loader first.');
@@ -73,8 +81,10 @@ function extractEmail(data) {
 
   var results = [];
   var total = candidates.length;
+  var emailCount = 0;
 
   for (var idx = 0; idx < total; idx++) {
+    if (window.__fmAbortEmail) break;
     var c = candidates[idx];
     var uid = String(c.uid || c.unique_id);
     var params = {
@@ -91,16 +101,23 @@ function extractEmail(data) {
         headers: {
           'fm-sign': sign,
           'accept': 'application/json',
-          'region': 'ES',
+          'region': String(config.region),
           'lang': 'ZH_CN',
           'source': 'pc'
         }
       });
       var data = await resp.json();
-      if (data.code === 200) {
+      if (data.code === 'MSG_SAFE_0001' || data.msg === 'MSG_SAFE_0001') {
+        window.__fmRateLimited = true;
+        results.push({ uid: uid, username: c.unique_id, error: 'MSG_SAFE_0001', ok: false });
+        console.warn('Verification required; stopping email injection immediately.');
+        break;
+      } else if (data.code === 200) {
         var email = extractEmail(data);
         results.push({ uid: uid, username: c.unique_id, email: email || 'NONE', ok: true });
+        if (email) emailCount++;
         console.log('[' + (idx+1) + '/' + total + '] ' + c.unique_id + ' -> ' + (email || 'NONE'));
+        if (Number(config.maxEmails) > 0 && emailCount >= Number(config.maxEmails)) break;
       } else {
         results.push({ uid: uid, username: c.unique_id, error: data.msg || ('code=' + data.code), ok: false });
         console.log('[' + (idx+1) + '/' + total + '] ' + c.unique_id + ' -> ERR: ' + (data.msg || data.code));
@@ -110,18 +127,21 @@ function extractEmail(data) {
       console.log('[' + (idx+1) + '/' + total + '] ' + c.unique_id + ' -> ERR: ' + e.message);
     }
 
-    await new Promise(function(r) { setTimeout(r, 200 + Math.random() * 300); });
+    var delayRange = Math.max(0, Number(config.maxDelayMs) - Number(config.minDelayMs));
+    await new Promise(function(r) { setTimeout(r, Number(config.minDelayMs) + Math.random() * delayRange); });
   }
 
   var withEmail = results.filter(function(r) { return r.email && r.email !== 'NONE'; });
   console.log('\n=== Done: ' + withEmail.length + '/' + total + ' have email ===');
 
-  var blob = new Blob([JSON.stringify(results, null, 2)], {type: 'application/json'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'fastmoss_es_emails.json';
-  a.click();
-  console.log('Downloaded fastmoss_es_emails.json');
+  if (config.download) {
+    var blob = new Blob([JSON.stringify(results, null, 2)], {type: 'application/json'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = String(config.outputName);
+    a.click();
+    console.log('Downloaded ' + config.outputName);
+  }
   window.__emailResults = results;
 })();
 

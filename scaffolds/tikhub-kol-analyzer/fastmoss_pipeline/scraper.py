@@ -26,6 +26,7 @@ from urllib.parse import urlencode
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_PROFILE_DIR = PROJECT_DIR / "output" / ".fastmoss-profile"
 SEARCH_URL = "https://www.fastmoss.com/zh/influencer/search"
+EMAIL_SCRIPT = Path(__file__).resolve().parent / "browser_email_enrichment.js"
 API_PATH_HINTS = ("/api/author/search", "/api/influencer/search")
 
 
@@ -542,23 +543,6 @@ class FastMossScraper:
             self._login_in_context(page, username, password, verification_timeout)
             return {"ok": True, "status": "authenticated", "profile_dir": str(self.profile_dir)}
 
-    def extract_cookies(
-        self,
-        username: str = "",
-        password: str = "",
-        verification_timeout: int = 300,
-    ) -> list[dict[str, Any]]:
-        """Extract browser cookies after ensuring authentication.
-
-        Returns a list of cookie dicts suitable for use in requests headers.
-        When the saved session is still valid this runs headless and returns
-        immediately; otherwise it opens a visible browser for login.
-        """
-        use_headed = bool(username or password) or not self.has_saved_session
-        with self._browser(headed=use_headed) as (context, page):
-            self._login_in_context(page, username, password, verification_timeout)
-            return context.cookies()
-
     def _fill_range(self, page: Any, terms: tuple[str, ...], minimum: Any, maximum: Any) -> bool:
         if minimum is None and maximum is None:
             return True
@@ -729,8 +713,19 @@ class FastMossScraper:
         for selector in selectors:
             button = self._visible(page.locator(selector))
             if button and button.is_enabled():
+                active = page.locator(".ant-pagination-item-active")
+                previous = active.inner_text().strip() if active.count() else ""
                 button.click()
-                page.wait_for_timeout(800)
+                if previous:
+                    try:
+                        page.wait_for_function(
+                            "previous => (document.querySelector('.ant-pagination-item-active')?.textContent || '').trim() !== previous",
+                            arg=previous,
+                            timeout=min(self.timeout_ms, 10_000),
+                        )
+                    except Exception:
+                        return False
+                page.wait_for_timeout(500)
                 return True
         return False
 
@@ -762,6 +757,13 @@ class FastMossScraper:
         query = {"shop_window": "1"} if criteria.shop_affiliates_only else {}
         if country:
             query["region"] = country
+        if criteria.min_followers is not None or criteria.max_followers is not None:
+            query["follower"] = f"{criteria.min_followers or 0},{criteria.max_followers or ''}"
+        if any(
+            value and "contact" in str(label).lower()
+            for label, value in criteria.extra_filters.items()
+        ):
+            query["contact"] = "3"
         url = SEARCH_URL + (f"?{urlencode(query)}" if query else "")
         self._goto(page, url)
         if not self._authenticated(page):
@@ -775,8 +777,10 @@ class FastMossScraper:
             raise FastMossRateLimited("FastMoss rate-limited the creator search; wait before retrying")
 
         rows: dict[str, dict[str, Any]] = {}
-        max_pages = max(1, min(100, math.ceil(limit / 20) + 2))
+        max_pages = max(1, min(300, math.ceil(limit / 10) + 5))
+        pages_visited = 0
         for _ in range(max_pages):
+            pages_visited += 1
             for payload in payloads:
                 for row in records_from_payload(payload, country):
                     rows[row["username"]] = row
@@ -789,6 +793,7 @@ class FastMossScraper:
             page.remove_listener("response", capture)
         except Exception:
             pass
+        warnings.append(f"pages_visited={pages_visited}; candidates_seen={len(rows)}")
         return list(rows.values()), warnings
 
     def search(
@@ -850,6 +855,165 @@ class FastMossScraper:
             "warnings": sorted(set(warnings)),
             "results": results,
         }
+
+    def enrich_emails(
+        self,
+        rows: list[dict[str, Any]],
+        *,
+        target_emails: int = 0,
+        username: str = "",
+        password: str = "",
+        headed: bool = False,
+        verification_timeout: int = 300,
+        region: str = "",
+        min_delay_ms: int = 2_000,
+        max_delay_ms: int = 3_000,
+    ) -> dict[str, Any]:
+        """Enrich candidates inside the authenticated browser network context."""
+        if not EMAIL_SCRIPT.is_file():
+            raise FastMossError(f"email injection is missing: {EMAIL_SCRIPT}")
+        if target_emails < 0:
+            raise ValueError("target_emails cannot be negative")
+        if not 0 <= min_delay_ms <= max_delay_ms:
+            raise ValueError("email delay range is invalid")
+        if not self.has_saved_session and not (username and password):
+            raise FastMossAuthRequired("FastMoss username and password are required for the first login")
+
+        candidates = [dict(row) for row in rows if row.get("uid")]
+        if not candidates:
+            return {
+                "ok": True,
+                "status": "complete",
+                "candidate_count": len(rows),
+                "processed_count": 0,
+                "email_count": sum(bool(row.get("email")) for row in rows),
+                "results": rows,
+            }
+
+        source = EMAIL_SCRIPT.read_text(encoding="utf-8")
+        use_headed = headed or bool(username or password)
+        injection_log: list[str] = []
+        with self._browser(headed=use_headed) as (_, page):
+            page.on("console", lambda message: injection_log.append(message.text))
+            self._login_in_context(page, username, password, verification_timeout)
+            query = {"region": region} if region else {}
+            self._goto(page, SEARCH_URL + (f"?{urlencode(query)}" if query else ""))
+            page.evaluate(
+                """payload => {
+                    window.__candidates = payload.rows;
+                    window.__fmEmailConfig = payload.config;
+                    window.__emailResults = [];
+                    window.__fmAbortEmail = false;
+                    window.__fmRateLimited = false;
+                }""",
+                {
+                    "rows": candidates,
+                    "config": {
+                        "region": region or "ES",
+                        "minDelayMs": min_delay_ms,
+                        "maxDelayMs": max_delay_ms,
+                        "maxEmails": target_emails,
+                        "download": False,
+                    },
+                },
+            )
+            page.evaluate("source => { window.eval(source); return true; }", source)
+            page.evaluate("() => window.__emailPromise")
+
+            email_results = page.evaluate("() => window.__emailResults || []")
+            rate_limited = bool(page.evaluate("() => window.__fmRateLimited === true"))
+            body = page.locator("body").inner_text(timeout=10_000)[:8_000].lower()
+            verification_required = any(marker in body for marker in (
+                "captcha", "verify you are human", "security verification",
+                "验证码", "安全验证", "人机验证", "滑块",
+            ))
+
+        by_uid = {
+            str(item.get("uid")): item
+            for item in email_results
+            if item.get("uid")
+        }
+        enriched: list[dict[str, Any]] = []
+        for row in rows:
+            updated = dict(row)
+            item = by_uid.get(str(row.get("uid") or ""))
+            email = str((item or {}).get("email") or "")
+            if email and email != "NONE":
+                updated["email"] = email
+                updated["email_source"] = "fastmoss_browser"
+            enriched.append(updated)
+
+        if verification_required:
+            status = "fastmoss_verification_required"
+        elif rate_limited:
+            status = "fastmoss_rate_limited"
+        else:
+            status = "complete"
+        return {
+            "ok": not (verification_required or rate_limited),
+            "status": status,
+            "candidate_count": len(rows),
+            "processed_count": len(email_results),
+            "email_count": sum(bool(row.get("email")) for row in enriched),
+            "warnings": [
+                message for message in injection_log
+                if "ERR:" in message or "Verification required" in message
+            ][-20:],
+            "results": enriched,
+        }
+
+    def harvest(
+        self,
+        criteria: SearchCriteria | dict[str, Any],
+        *,
+        target_emails: int,
+        candidate_limit: int = 5_000,
+        username: str = "",
+        password: str = "",
+        headed: bool = False,
+        verification_timeout: int = 300,
+    ) -> dict[str, Any]:
+        """Collect candidates first, then enrich them with email in the browser."""
+        if not 1 <= target_emails <= 5_000:
+            raise ValueError("target_emails must be between 1 and 5000")
+        if not target_emails <= candidate_limit <= 5_000:
+            raise ValueError("candidate_limit must be between target_emails and 5000")
+        parsed = criteria if isinstance(criteria, SearchCriteria) else SearchCriteria.from_dict(criteria)
+        candidate_result = self.search(
+            parsed,
+            limit=candidate_limit,
+            username=username,
+            password=password,
+            headed=headed,
+            verification_timeout=verification_timeout,
+        )
+        candidates = candidate_result["results"]
+        region = parsed.countries[0] if len(parsed.countries) == 1 else ""
+        email_result = self.enrich_emails(
+            candidates,
+            target_emails=target_emails,
+            headed=headed,
+            verification_timeout=verification_timeout,
+            region=region,
+        )
+        candidate_results = email_result["results"]
+        with_email = [row for row in candidate_results if row.get("email")]
+        email_result.update({
+            "source": "fastmoss_browser",
+            "criteria": asdict(parsed),
+            "target_emails": target_emails,
+            "candidate_status": candidate_result["status"],
+            "candidate_warnings": candidate_result.get("warnings", []),
+            "candidate_results": candidate_results,
+            "results": with_email[:target_emails],
+            "count": min(len(with_email), target_emails),
+        })
+        if email_result["status"] == "complete":
+            email_result["status"] = (
+                "complete" if len(with_email) >= target_emails else "partial"
+            )
+            email_result["ok"] = True
+        return email_result
 
 
 def write_result_csv(result: dict[str, Any], output: str | Path) -> Path:

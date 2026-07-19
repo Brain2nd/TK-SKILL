@@ -9,7 +9,10 @@ from __future__ import annotations
 import asyncio
 import os
 import csv
+import json
 import importlib.util
+import subprocess
+import time
 import sys
 from dataclasses import asdict
 from datetime import UTC, datetime
@@ -28,13 +31,9 @@ from shared.feishu_bitable import BitableConfig, sync_csv
 load_env_file(Path(__file__).resolve().parent.parent / ".env")
 
 from shared.contact_enrichment import enrich_contact
-from fastmoss_pipeline.api_client import FastMossApiClient
 from fastmoss_pipeline.scraper import (
-    FastMossAuthRequired,
-    FastMossBlocked,
     FastMossError,
     FastMossScraper,
-    FastMossVerificationRequired,
     SearchCriteria,
     matches_criteria,
     normalize_record,
@@ -59,6 +58,37 @@ from tikhub_pipeline.tikhub_fetcher import (
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
+VERIFICATION_STATE = PROJECT_DIR / "output" / ".fastmoss-profile" / "verification.json"
+VERIFICATION_STOP = PROJECT_DIR / "output" / ".fastmoss-profile" / "verification.stop"
+VERIFICATION_READY = PROJECT_DIR / "output" / ".fastmoss-profile" / "verification.ready"
+
+
+def _start_verification_browser() -> dict[str, Any]:
+    VERIFICATION_STATE.parent.mkdir(parents=True, exist_ok=True)
+    VERIFICATION_STOP.unlink(missing_ok=True)
+    process = subprocess.Popen(
+        [sys.executable, "-m", "fastmoss_pipeline.verification_session"],
+        cwd=PROJECT_DIR,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    VERIFICATION_STATE.write_text(json.dumps({"pid": process.pid}), encoding="utf-8")
+    for _ in range(40):
+        if VERIFICATION_READY.exists() or process.poll() is not None:
+            break
+        time.sleep(0.25)
+    return {"pid": process.pid, "browser_ready": VERIFICATION_READY.exists()}
+
+
+def _stop_verification_browser() -> None:
+    VERIFICATION_STOP.parent.mkdir(parents=True, exist_ok=True)
+    VERIFICATION_STOP.write_text("stop", encoding="utf-8")
+    for _ in range(40):
+        if not VERIFICATION_READY.exists():
+            break
+        time.sleep(0.25)
+    VERIFICATION_STATE.unlink(missing_ok=True)
 
 SPAIN_DISCOVERY_KEYWORDS = [
     "belleza", "maquillaje", "skincare", "moda", "hogar", "cocina",
@@ -139,7 +169,6 @@ def get_runtime_status() -> dict[str, Any]:
             "tts": {"source": "fastmoss_browser", "available_here": True},
         },
         "fastmoss_session_configured": FastMossScraper().has_saved_session,
-        "fastmoss_api_cookie_available": FastMossApiClient().has_cookies,
         "feishu_bitable_configured": BitableConfig.from_env(required=False) is not None,
     }
 
@@ -272,18 +301,6 @@ async def search_fastmoss_creators_by_features(
         return _search_error(exc)
 
 
-# FastMoss contact API client, authenticated from the managed browser session.
-
-_FASTMOSS_API_CLIENT: FastMossApiClient | None = None
-
-
-def _get_api_client() -> FastMossApiClient:
-    global _FASTMOSS_API_CLIENT
-    if _FASTMOSS_API_CLIENT is None:
-        _FASTMOSS_API_CLIENT = FastMossApiClient()
-    return _FASTMOSS_API_CLIENT
-
-
 @mcp.tool()
 async def collect_fastmoss_candidates(
     features: dict[str, Any],
@@ -293,16 +310,20 @@ async def collect_fastmoss_candidates(
     headed: bool = False,
     verification_timeout: int = 300,
     output_csv: str = "",
+    candidate_limit: int = 0,
 ) -> dict[str, Any]:
-    """Collect FastMoss creator candidates and save a resumable CSV artifact.
+    """Collect FastMoss candidates, enrich emails, and save an audit artifact.
 
-    Drive a managed Playwright browser, persist the website session, capture search
-    responses, applies local filters, and preserves ``uid`` for subsequent
-    ``harvest_fastmoss_emails`` calls. It never requires a copied Cookie header.
+    Candidate discovery uses Playwright response/DOM capture with verified UI
+    pagination. Email enrichment then runs in the same persistent browser
+    network context. ``limit`` is the target number of real emails, not merely
+    a cap on the first candidate page.
 
     Args:
         features: Creator filters accepted by ``SearchCriteria``.
-        limit: Maximum rows to save.
+        limit: Target number of rows containing a real email.
+        candidate_limit: Maximum candidates to inspect; defaults to five times
+            ``limit`` (capped at 5000).
         username: FastMoss account, required only for the first login.
         password: FastMoss password, required only for the first login.
         headed: Force a visible browser even when a saved session exists.
@@ -310,11 +331,13 @@ async def collect_fastmoss_candidates(
         output_csv: Optional destination. Defaults to a timestamped file under
             ``output/fastmoss``.
     """
+    scan_limit = candidate_limit or min(5_000, max(limit, limit * 5))
     try:
         result = await asyncio.to_thread(
-            FastMossScraper().search,
+            FastMossScraper().harvest,
             features,
-            limit=limit,
+            target_emails=limit,
+            candidate_limit=scan_limit,
             username=username,
             password=password,
             headed=headed,
@@ -325,20 +348,81 @@ async def collect_fastmoss_candidates(
 
     rows = result.get("results") or []
 
+    if result.get("status") == "fastmoss_verification_required":
+        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        checkpoint = PROJECT_DIR / "output" / "fastmoss" / f"verification-{stamp}.json"
+        candidate_file = PROJECT_DIR / "output" / "fastmoss" / f"verification-{stamp}-candidates.csv"
+        checkpoint.parent.mkdir(parents=True, exist_ok=True)
+        _write_csv(result.get("candidate_results") or rows, candidate_file)
+        checkpoint.write_text(json.dumps({
+            "limit": limit,
+            "output_csv": output_csv,
+            "candidate_file": str(candidate_file),
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
+        browser = await asyncio.to_thread(_start_verification_browser)
+        return {
+            "ok": False,
+            "status": "fastmoss_verification_required",
+            "message": "Email injection stopped at the first verification challenge. Complete verification in the open browser, then call continue_fastmoss_after_verification.",
+            "checkpoint_file": str(checkpoint),
+            "candidate_file": str(candidate_file),
+            "completed_with_email": len(rows),
+            "candidate_count": result.get("candidate_count", 0),
+            **browser,
+        }
+
     if output_csv:
         destination = Path(output_csv).expanduser().resolve()
     else:
         stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         destination = PROJECT_DIR / "output" / "fastmoss" / f"browser-collect-{stamp}.csv"
+    candidate_destination = destination.with_name(destination.stem + "_candidates.csv")
+    _write_csv(result.get("candidate_results") or rows, candidate_destination)
     _write_csv(rows, destination)
+    json_destination = destination.with_suffix(".json")
+    json_destination.write_text(json.dumps({
+        "status": result.get("status"),
+        "target_emails": limit,
+        "candidate_count": result.get("candidate_count", 0),
+        "processed_count": result.get("processed_count", 0),
+        "email_count": result.get("email_count", len(rows)),
+        "warnings": result.get("warnings", []),
+        "candidate_warnings": result.get("candidate_warnings", []),
+        "candidate_file": str(candidate_destination),
+        "results": rows,
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
     return {
-        "ok": True,
+        "ok": bool(result.get("ok", True)),
         "status": result.get("status", "complete"),
         "count": len(rows),
+        "target": limit,
+        "candidate_count": result.get("candidate_count", 0),
+        "processed_count": result.get("processed_count", 0),
         "warnings": result.get("warnings", []),
         "output_file": str(destination),
-        "email_ready": all(bool(row.get("uid")) for row in rows),
+        "candidate_file": str(candidate_destination),
+        "output_json": str(json_destination),
+        "email_ready": all(bool(row.get("email")) for row in rows),
     }
+
+
+@mcp.tool()
+async def continue_fastmoss_after_verification(
+    checkpoint_file: str,
+    headed: bool = True,
+) -> dict[str, Any]:
+    """Continue a stopped JS email workflow after the user confirms verification."""
+    checkpoint = Path(checkpoint_file).expanduser().resolve()
+    if not checkpoint.is_file():
+        raise ValueError(f"checkpoint not found: {checkpoint}")
+    state = json.loads(checkpoint.read_text(encoding="utf-8"))
+    await asyncio.to_thread(_stop_verification_browser)
+    return await harvest_fastmoss_emails(
+        state["candidate_file"],
+        output_csv=str(state.get("output_csv") or ""),
+        target_emails=int(state.get("limit") or 0),
+        headed=headed,
+    )
 
 
 @mcp.tool()
@@ -676,101 +760,46 @@ def enrich_and_rank_candidate_file(
 async def harvest_fastmoss_emails(
     input_csv: str,
     output_csv: str = "",
-    delay_ms: int = 400,
+    target_emails: int = 0,
+    headed: bool = False,
+    verification_timeout: int = 300,
 ) -> dict[str, Any]:
-    """Harvest creator emails from FastMoss detail pages via the authorContact API.
-
-    Reads a candidate CSV (must have ``uid`` and ``unique_id`` columns), calls
-    the internal ``/api/author/v3/detail/authorContact`` endpoint for each
-    creator, and writes an enriched CSV with ``email`` and ``email_source``
-    columns.
-
-    Authentication cookies are extracted automatically from the persistent
-    FastMoss browser session. No DevTools or manual cookie copying is needed.
-
-    Stops early on ``MSG_SAFE_0001`` (rate-limit) and saves partial results.
-
-    Args:
-        input_csv: Path to a candidate CSV returned by `collect_fastmoss_candidates`.
-        output_csv: Path for enriched CSV. Defaults to
-            ``<input>_with_emails.csv``.
-        delay_ms: Delay between API calls in milliseconds (default 400).
-    """
-    source = Path(input_csv).expanduser()
-    if not source.exists():
+    """Resume browser-context email enrichment for a candidate CSV."""
+    source = Path(input_csv).expanduser().resolve()
+    if not source.is_file():
         raise ValueError(f"input_csv not found: {source}")
-
-    destination = Path(output_csv).expanduser() if output_csv else source.with_name(
-        source.stem + "_with_emails" + source.suffix
-    )
-
     rows = read_csv(source, 1_000_000)
     if not rows:
-        return {"ok": False, "reason": "input CSV is empty"}
+        return {"ok": False, "status": "empty_input", "message": "input CSV is empty"}
 
-    client = _get_api_client()
-    cookie_ready = client.has_cookies and await asyncio.to_thread(client._probe_auth)
-    if not cookie_ready:
-        try:
-            await asyncio.to_thread(client.refresh_cookies_from_browser)
-        except Exception as exc:
-            return _search_error(exc)
-    total = len(rows)
-    success = 0
-    rate_limited = 0
-    errors = 0
+    destination = (
+        Path(output_csv).expanduser().resolve()
+        if output_csv else source.with_name(source.stem + "_with_emails" + source.suffix)
+    )
+    needed = max(0, target_emails - sum(bool(row.get("email")) for row in rows))
+    try:
+        result = await asyncio.to_thread(
+            FastMossScraper().enrich_emails,
+            rows,
+            target_emails=needed,
+            headed=headed,
+            verification_timeout=verification_timeout,
+            region=next((str(row.get("country") or "") for row in rows if row.get("country")), ""),
+        )
+    except Exception as exc:
+        return _search_error(exc)
 
-    async def _batch() -> dict[str, Any]:
-        nonlocal success, rate_limited, errors
-        for i, row in enumerate(rows):
-            uid = str(row.get("uid") or row.get("unique_id", ""))
-            if not uid:
-                errors += 1
-                continue
-
-            # Skip rows that already have a valid email
-            if row.get("email") and row["email"].strip():
-                continue
-
-            result = await asyncio.to_thread(client.get_author_contact, uid)
-            err = result.get("error")
-            if err:
-                if "MSG_SAFE_0001" in str(err):
-                    rate_limited += 1
-                    # Save partial results
-                    _write_csv(rows, destination)
-                    return {
-                        "ok": True,
-                        "status": "rate_limited",
-                        "total": total,
-                        "processed": i,
-                        "with_email": sum(1 for r in rows if r.get("email", "").strip()),
-                        "errors": errors,
-                        "rate_limited_at": i,
-                        "output_file": str(destination),
-                        "hint": "Wait a few minutes then re-run to resume from where it stopped.",
-                    }
-                errors += 1
-            elif result.get("has_email"):
-                row["email"] = result["email"]
-                row["email_source"] = "detail_api"
-                success += 1
-
-            await asyncio.sleep(delay_ms / 1000)
-
-        _write_csv(rows, destination)
-        return {
-            "ok": True,
-            "status": "complete",
-            "total": total,
-            "with_email": sum(1 for r in rows if r.get("email", "").strip()),
-            "new_emails": success,
-            "errors": errors,
-            "rate_limited": rate_limited,
-            "output_file": str(destination),
-        }
-
-    return await _batch()
+    _write_csv(result["results"], destination)
+    return {
+        "ok": result["ok"],
+        "status": result["status"],
+        "total": len(rows),
+        "processed": result["processed_count"],
+        "with_email": result["email_count"],
+        "target_emails": target_emails,
+        "warnings": result.get("warnings", []),
+        "output_file": str(destination),
+    }
 
 
 @mcp.tool()

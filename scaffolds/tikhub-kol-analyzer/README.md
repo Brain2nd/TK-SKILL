@@ -41,6 +41,10 @@ claude mcp add --scope local creator-search -- "$(pwd)/run_mcp.sh"
 - 按关键词搜索 TikTok 创作者。
 - 根据国家、粉丝数、播放量、互动率、销量、GMV 和类别筛选达人。
 - 使用持久浏览器会话抓取 FastMoss Creator Search 当前账号可见的数据。
+- 在真实浏览器页面上下文执行固定采集脚本，复用浏览器自身的 TLS/HTTP 网络栈；不模拟
+  DevTools 粘贴，也不伪造 TLS 指纹。
+- Agent 只能通过 `SearchCriteria` 白名单传入国家、粉丝数、销量、关键词和数量等结构化
+  参数；采集与邮箱脚本不会由 Agent 动态生成或按文本替换。
 - 在一次 FastMoss 会话中轮换多个关键词，并兼容新版 Ant Design Select 搜索框。
 - 用 `discover_spain_creators_deep` 并行执行 FastMoss 批量关键词与 TikHub 多轮发现。
 - 检查 TikTok 账号和近期视频表现。
@@ -73,6 +77,12 @@ FastMoss 也提供本地调试入口：
   --criteria '{"keywords":["belleza","hogar","unboxing"],"countries":["ES"],"max_followers":10000}' \
   --limit 500 --output output/fastmoss/example.csv
 ```
+
+正式自动化流程分成两个阶段：Playwright 通过页面响应与 DOM 可靠翻页收集候选，然后读取
+`fastmoss_pipeline/browser_email_enrichment.js` 作为固定、受版本控制的页面脚本补全邮箱。
+Agent 只传结构化配置；浏览器内下载关闭，结果由 Python 回收并写入 CSV 与 JSON 审计文件。
+JSON 审计会记录候选数、处理数、邮箱数、目标数和分页警告。遇到验证码、短信验证、限流
+或封禁时会停止或等待人工处理，不会切换身份规避风控。
 
 `run_multi_round_search` 现在接受 `keywords` 列表，默认轮次间隔为 0 秒；需要跨天采样时再
 显式设置 `interval_seconds`。西班牙双源深度发现会分别保存 FastMoss CSV 和 TikHub

@@ -1,6 +1,6 @@
 ---
 name: fastmoss-creator-harvest
-description: Automatically collect and filter FastMoss TikTok creator candidates, save CSV results, and enrich publicly listed emails through the project's creator-search MCP server. Use when the user asks Claude to run the FastMoss JS injection workflow, scrape or export FastMoss creators, find TikTok Shop affiliates, collect low-follower or low-sales candidates, retrieve public creator emails, resume an interrupted harvest, or merge FastMoss CSV files. Do not ask the user to open DevTools, copy cookies, or paste JavaScript.
+description: Automatically collect and filter FastMoss TikTok creator candidates, save CSV results, and enrich publicly listed emails through the project's creator-search MCP server. Use when the user asks Claude to scrape or export FastMoss creators, find TikTok Shop affiliates, collect filtered candidates, retrieve public creator emails, resume an interrupted harvest, or merge FastMoss CSV files. Do not ask the user to open DevTools, copy cookies, or paste JavaScript.
 ---
 
 # FastMoss Creator Harvest
@@ -16,8 +16,11 @@ copy request cookies or operate browser developer tools.
    used only for login; the persistent browser profile stores the website
    session, not the supplied credentials.
 3. Call `collect_fastmoss_candidates` with a `features` object and a result
-   limit. The tool opens the managed Playwright browser, logs in when needed,
-   applies filters, captures FastMoss responses, and writes a CSV.
+   limit. Candidate discovery first uses verified UI pagination and browser
+   response capture. Email enrichment then runs in the authenticated browser
+   network context. The `limit` is the target number of real emails; the tool
+   scans up to five times as many candidates by default and writes CSV plus a
+   JSON audit containing counts and warnings.
 4. Return the CSV path, count, status, and warnings. Do not silently broaden
    the user's filters.
 
@@ -39,15 +42,22 @@ Example legacy Spanish collector criteria:
 }
 ```
 
-## Enrich emails
+## Resume email enrichment
 
-Call `harvest_fastmoss_emails` with the collection CSV. The tool automatically
-derives authentication cookies from the managed browser session; never request
-or accept a copied Cookie header.
+Call `harvest_fastmoss_emails` with a candidate CSV. It resumes enrichment in
+the managed browser session; never request or accept a copied Cookie header.
 
-If the result is `rate_limited`, stop and preserve the partial output. After a
+If the result is `fastmoss_rate_limited`, stop and preserve the partial output. After a
 few minutes, call the tool again on that output. Existing emails are skipped,
 so the run resumes rather than starting over.
+
+During an active collection call, keep the visible browser open when a
+verification UI appears. Pause new email requests, let the user solve the
+challenge in that window, and resume the pending email rows in the same browser
+session after the verification UI clears. If the wait times out and collection
+returns `fastmoss_verification_required`, ask the user to finish verification in
+the fallback browser, then call `continue_fastmoss_after_verification` with the
+returned `checkpoint_file`.
 
 Use `merge_fastmoss_csvs` to combine rounds and deduplicate by username,
 preferring rows containing an email.

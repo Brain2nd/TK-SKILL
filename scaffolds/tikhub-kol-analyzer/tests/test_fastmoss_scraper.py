@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from fastmoss_pipeline.scraper import (
+    FastMossScraper,
     SearchCriteria,
     matches_criteria,
     normalize_record,
@@ -79,6 +80,52 @@ class RecordTests(unittest.TestCase):
             "country": "ES", "followers": 40_000, "avg_views": 8_000,
             "bio": "Beauty reviews",
         }, criteria))
+
+
+class HarvestTests(unittest.TestCase):
+    def test_harvest_keeps_email_target_separate_from_candidate_limit(self) -> None:
+        class StubScraper(FastMossScraper):
+            def __init__(self) -> None:
+                pass
+
+            def search(self, criteria, **kwargs):
+                self.search_limit = kwargs["limit"]
+                return {
+                    "status": "complete",
+                    "warnings": ["pages_visited=4; candidates_seen=3"],
+                    "results": [
+                        {"uid": "1", "username": "one", "email": ""},
+                        {"uid": "2", "username": "two", "email": ""},
+                        {"uid": "3", "username": "three", "email": ""},
+                    ],
+                }
+
+            def enrich_emails(self, rows, **kwargs):
+                self.email_target = kwargs["target_emails"]
+                enriched = [dict(row) for row in rows]
+                enriched[0]["email"] = "one@example.com"
+                enriched[2]["email"] = "three@example.com"
+                return {
+                    "ok": True,
+                    "status": "complete",
+                    "candidate_count": len(rows),
+                    "processed_count": len(rows),
+                    "email_count": 2,
+                    "warnings": [],
+                    "results": enriched,
+                }
+
+        scraper = StubScraper()
+        result = scraper.harvest(
+            {"countries": ["FR"], "max_followers": 9_999},
+            target_emails=2,
+            candidate_limit=10,
+        )
+        self.assertEqual(scraper.search_limit, 10)
+        self.assertEqual(scraper.email_target, 2)
+        self.assertEqual(result["status"], "complete")
+        self.assertEqual(result["count"], 2)
+        self.assertEqual([row["username"] for row in result["results"]], ["one", "three"])
 
 
 if __name__ == "__main__":
