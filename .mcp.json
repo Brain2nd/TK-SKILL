@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "creator-search": {
+      "type": "stdio",
+      "command": "./scaffolds/tikhub-kol-analyzer/run_mcp.sh",
+      "args": []
+    }
+  }
+}

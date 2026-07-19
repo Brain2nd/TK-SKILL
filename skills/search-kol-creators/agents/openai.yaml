@@ -1,0 +1,4 @@
+interface:
+  display_name: "Search KOL Creators"
+  short_description: "Route creator searches through TikHub or FastMoss"
+  default_prompt: "Use $search-kol-creators to find creators matching my criteria with TikHub or FastMoss."
