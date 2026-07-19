@@ -15,7 +15,10 @@ const { createBatchManifest, payloadSha256 } = await import(
 );
 
 const campaignId = "spain-tiktok-shop-eur20-test";
-const sourceFile = resolve(coreRoot, "..", "tikhub-kol-analyzer", "output", "tts_l1_eu", "final.csv");
+const sourceFile = resolve(
+  process.env.KOL_CANDIDATES_FILE ||
+  resolve(coreRoot, "..", "tikhub-kol-analyzer", "output", "eu5_10_tikhub_20260717", "final.csv"),
+);
 const templateFile = resolve(coreRoot, "outreach_templates", "spain-tiktok-shop-eur20.json");
 const reportFile = resolve(coreRoot, "outreach_batches", "spain-eur20-dry-run.json");
 
@@ -59,6 +62,7 @@ if (
     item.outreach_intent !== "fixed_offer" ||
     item.followup_mode !== "disabled" ||
     !item.body.includes("You will receive €20 for the post.")
+    || !item.body.includes("https://vm.tiktok.com/ZNRoT8PuT/")
   )
 ) {
   throw new Error("Refusing to generate UI data because the Spain recipient or template invariants failed");
@@ -66,7 +70,7 @@ if (
 
 // Keep generated artifacts portable and safe to publish. The absolute local
 // path is used only to read the source file and never written to demo JSON.
-report.source_file = "scaffolds/tikhub-kol-analyzer/output/tts_l1_eu/final.csv";
+report.source_file = "scaffolds/tikhub-kol-analyzer/output/eu5_10_tikhub_20260717/final.csv";
 await writeFile(reportFile, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 
 const traitLabels = {

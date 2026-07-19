@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { validateExecutionPayload, validateSenderInput } from "../server/outreach-gateway.mjs";
+import {
+  createOAuthAuthorization,
+  validateExecutionPayload,
+  validateOAuthSenderInput,
+  validatePersonalizationRequest,
+  validateSenderInput,
+} from "../server/outreach-gateway.mjs";
 import { canonicalBatchSnapshot, canonicalItemPayload } from "../lib/outreach-contract.mjs";
 
 const TENANT = "a".repeat(16);
@@ -56,6 +62,58 @@ test("sender credentials are validated and remain a write-only input", () => {
   assert.equal(sender.verified, false);
   assert.throws(() => validateSenderInput({ ...input, from_email: "bad", password: "x" }), /invalid sender email/);
   assert.throws(() => validateSenderInput({ ...input, from_name: "Bad\nBcc", password: "x" }), /invalid sender name/);
+});
+
+test("OAuth senders need only an address plus a provider authorization", () => {
+  const previousClientId = process.env.LOOP_GOOGLE_OAUTH_CLIENT_ID;
+  const previousRedirect = process.env.LOOP_OAUTH_REDIRECT_URI;
+  process.env.LOOP_GOOGLE_OAUTH_CLIENT_ID = "test-client.apps.googleusercontent.com";
+  try {
+    const input = {
+      id: "sender_oauth",
+      owner_key: TENANT,
+      provider: "gmail",
+      label: "Vira Gmail",
+      from_name: "Vira",
+      from_email: "VIRA@example.com",
+      daily_cap: 25,
+    };
+    const sender = validateOAuthSenderInput(input);
+    assert.equal(sender.email, "vira@example.com");
+    assert.equal(sender.authMode, "oauth");
+    assert.equal(sender.verified, false);
+    const authorization = createOAuthAuthorization(input);
+    const url = new URL(authorization.authorizationUrl);
+    assert.equal(url.hostname, "accounts.google.com");
+    assert.equal(url.searchParams.get("code_challenge_method"), "S256");
+    assert.match(url.searchParams.get("scope"), /gmail\.send/);
+    assert.equal(url.searchParams.has("client_secret"), false);
+    assert.throws(() => validateOAuthSenderInput({ ...input, provider: "unknown" }), /gmail or outlook/);
+    process.env.LOOP_OAUTH_REDIRECT_URI = "https://example.com/oauth/callback";
+    assert.throws(() => createOAuthAuthorization(input), /local http:\/\/ loopback/);
+  } finally {
+    if (previousClientId === undefined) delete process.env.LOOP_GOOGLE_OAUTH_CLIENT_ID;
+    else process.env.LOOP_GOOGLE_OAUTH_CLIENT_ID = previousClientId;
+    if (previousRedirect === undefined) delete process.env.LOOP_OAUTH_REDIRECT_URI;
+    else process.env.LOOP_OAUTH_REDIRECT_URI = previousRedirect;
+  }
+});
+
+test("AI personalization rejects recipients without public content evidence", () => {
+  const input = {
+    owner_key: TENANT,
+    snapshot_hash: "b".repeat(64),
+    project: { subject: "Paid collaboration", body: "Hi!\n\n{{personalized_hook}}" },
+    recipients: [{
+      recipient_id: "recipient_1", handle: "creator", bio: "",
+      style_summary: "city:Madrid, country:ES", recent_videos: [],
+    }],
+  };
+  assert.throws(() => validatePersonalizationRequest(input), /no public content evidence/);
+  assert.equal(validatePersonalizationRequest({
+    ...input,
+    recipients: [{ ...input.recipients[0], bio: "Beauty and skincare reviews" }],
+  }).recipients.length, 1);
 });
 
 test("a frozen batch validates stable ids, endpoints and item hashes", () => {

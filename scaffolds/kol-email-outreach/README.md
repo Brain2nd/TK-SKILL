@@ -113,7 +113,7 @@ CSV 没有显式筛选批准时默认保持未批准；`--approve-legacy-final-c
 npm run outreach:preview-analyzer
 ```
 
-默认读取画像模块的 `output/tts_l1_eu/final.csv`，输出 JSON/HTML 审批预览；该命令的 SMTP、TikTok DM 和 Feishu 写入固定为 0，也不会生成可执行批准清单。
+默认读取仓库内的十人画像验收样例 `output/eu5_10_tikhub_20260717/final.csv`，也可通过 `--candidates` 或 `KOL_CANDIDATES_FILE` 传入画像 MCP 本次返回的 `final_file`。命令输出 JSON/HTML 审批预览；SMTP、TikTok DM 和 Feishu 写入固定为 0，也不会生成可执行批准清单。
 
 ## 4. 生成、审批并发送首封
 

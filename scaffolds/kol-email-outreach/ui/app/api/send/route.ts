@@ -105,6 +105,20 @@ export async function POST(request: Request) {
       const batchId = await createPendingBatch(owner, projectId, result.personalization);
       return Response.json({ ok: true, project_id: projectId, batch_id: batchId, ...(await workspaceSnapshot(owner, projectId)) });
     }
+    if (payload.action === "start_oauth_sender") {
+      await assertSenderIdAvailable(owner, String(payload.sender?.id || ""));
+      const result = await gateway("/oauth/start", {
+        method: "POST",
+        body: JSON.stringify({ ...(payload.sender || {}), owner_key: tenantKey }),
+      });
+      await upsertSender(owner, { ...result.sender, verification_status: "configured" });
+      return Response.json({
+        ok: true,
+        oauth: result.oauth,
+        sender: result.sender,
+        ...(await workspaceSnapshot(owner, payload.project_id || "")),
+      });
+    }
     if (payload.action === "configure_sender") {
       await assertSenderIdAvailable(owner, String(payload.sender?.id || ""));
       const result = await gateway("/senders", { method: "POST", body: JSON.stringify({ ...(payload.sender || {}), owner_key: tenantKey }) });

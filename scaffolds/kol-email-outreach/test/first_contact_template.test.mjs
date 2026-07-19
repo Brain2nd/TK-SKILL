@@ -17,6 +17,8 @@ We have a paid TikTok Shop short-form video posting opportunity.
 
 We will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.
 
+Here is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/
+
 Would you be interested in collaborating with us?
 
 Vira`;
@@ -37,6 +39,7 @@ test("a creator hook cannot change the locked offer or subject", async () => {
   });
   assert.match(rendered.body, /beauty-focused UGC/);
   assert.match(rendered.body, /You will receive €20 for the post\./);
+  assert.match(rendered.body, /Here is a sample video for reference: https:\/\/vm\.tiktok\.com\/ZNRoT8PuT\//);
   assert.match(rendered.body, /only need to post it on your TikTok account and add the TikTok Shop product link/);
   assert.equal(rendered.subject, "Paid TikTok Shop short-form video opportunity");
 });

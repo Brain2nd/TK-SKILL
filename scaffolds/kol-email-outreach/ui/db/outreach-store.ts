@@ -3,7 +3,7 @@ import demoData from "../app/demo-data.json";
 import { canonicalBatchSnapshot, canonicalItemPayload } from "../lib/outreach-contract.mjs";
 
 const DEFAULT_SUBJECT = "Paid TikTok Shop short-form video opportunity";
-const DEFAULT_BODY = `Hi!
+const LEGACY_DEFAULT_BODY = `Hi!
 
 {{personalized_hook}}
 
@@ -14,6 +14,10 @@ We will provide the video for you, and you only need to post it on your TikTok a
 Would you be interested in collaborating with us?
 
 {{sender_name}}`;
+const DEFAULT_BODY = LEGACY_DEFAULT_BODY.replace(
+  "\n\nWould you be interested in collaborating with us?",
+  "\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?",
+);
 
 function database() {
   if (!env.DB) throw new Error("D1 binding DB is unavailable");
@@ -110,7 +114,8 @@ async function ensureSchema() {
     `CREATE TABLE IF NOT EXISTS sender_accounts (
       id TEXT PRIMARY KEY, owner_email TEXT NOT NULL, label TEXT NOT NULL, from_name TEXT NOT NULL,
       from_email TEXT NOT NULL, reply_to_email TEXT NOT NULL DEFAULT '', smtp_host TEXT NOT NULL,
-      smtp_port INTEGER NOT NULL, secure INTEGER NOT NULL DEFAULT 1, daily_cap INTEGER NOT NULL DEFAULT 50,
+      smtp_port INTEGER NOT NULL, secure INTEGER NOT NULL DEFAULT 1,
+      provider TEXT NOT NULL DEFAULT 'custom', auth_mode TEXT NOT NULL DEFAULT 'smtp', daily_cap INTEGER NOT NULL DEFAULT 50,
       verification_status TEXT NOT NULL DEFAULT 'configured', is_enabled INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
@@ -164,6 +169,13 @@ async function ensureSchema() {
   if (!(itemColumns.results || []).some((column: any) => column.name === "position")) {
     await db.prepare("ALTER TABLE send_batch_items ADD COLUMN position INTEGER NOT NULL DEFAULT 0").run();
   }
+  const senderColumns = await db.prepare("PRAGMA table_info(sender_accounts)").all();
+  if (!(senderColumns.results || []).some((column: any) => column.name === "provider")) {
+    await db.prepare("ALTER TABLE sender_accounts ADD COLUMN provider TEXT NOT NULL DEFAULT 'custom'").run();
+  }
+  if (!(senderColumns.results || []).some((column: any) => column.name === "auth_mode")) {
+    await db.prepare("ALTER TABLE sender_accounts ADD COLUMN auth_mode TEXT NOT NULL DEFAULT 'smtp'").run();
+  }
 }
 
 async function audit(ownerEmail: string, projectId: string, entityType: string, entityId: string, eventType: string, details: unknown = {}) {
@@ -215,6 +227,10 @@ async function seedDemo(ownerEmail: string) {
     });
     if (recipientStatements.length) await db.batch(recipientStatements);
     await audit(ownerEmail, projectId, "project", projectId, "project.seeded", { recipients: recipientStatements.length });
+  } else {
+    await db.prepare(
+      "UPDATE projects SET body_template = ?, updated_at = ? WHERE id = ? AND status = 'draft' AND body_template = ?",
+    ).bind(DEFAULT_BODY, now(), String((existing as any).id), LEGACY_DEFAULT_BODY).run();
   }
 }
 
@@ -448,17 +464,19 @@ export async function upsertSender(ownerEmail: string, input: any) {
   await db.prepare(
     `INSERT INTO sender_accounts (
       id, owner_email, label, from_name, from_email, reply_to_email, smtp_host, smtp_port, secure,
-      daily_cap, verification_status, is_enabled, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+      provider, auth_mode, daily_cap, verification_status, is_enabled, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
     ON CONFLICT(id) DO UPDATE SET label = excluded.label, from_name = excluded.from_name,
       from_email = excluded.from_email, reply_to_email = excluded.reply_to_email, smtp_host = excluded.smtp_host,
-      smtp_port = excluded.smtp_port, secure = excluded.secure, daily_cap = excluded.daily_cap,
+      smtp_port = excluded.smtp_port, secure = excluded.secure, provider = excluded.provider,
+      auth_mode = excluded.auth_mode, daily_cap = excluded.daily_cap,
       verification_status = excluded.verification_status, is_enabled = 1, updated_at = excluded.updated_at`,
   ).bind(
     senderId, ownerEmail, String(input.label || input.from_name || fromEmail).trim().slice(0, 80),
     String(input.from_name || "Partnerships").trim().slice(0, 80), fromEmail, replyTo,
     String(input.smtp_host || "").trim().toLowerCase().slice(0, 255), Number(input.smtp_port || 465),
-    input.secure === false ? 0 : 1, Math.min(500, Math.max(1, Number(input.daily_cap || 50))),
+    input.secure === false ? 0 : 1, String(input.provider || "custom").trim().toLowerCase(),
+    String(input.auth_mode || "smtp").trim().toLowerCase(), Math.min(500, Math.max(1, Number(input.daily_cap || 50))),
     String(input.verification_status || "configured"), now(), now(),
   ).run();
   const identityChanged = existingOwner && (

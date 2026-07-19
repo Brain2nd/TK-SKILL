@@ -69,6 +69,9 @@ def collect_fastmoss_seeds(
     desired: int,
     browser_enabled: bool,
     headed: bool,
+    resume: bool,
+    browser_min_delay_ms: int,
+    browser_max_delay_ms: int,
 ) -> list[dict]:
     rows = load_fastmoss_exports(
         export_paths, countries, max_followers
@@ -77,7 +80,9 @@ def collect_fastmoss_seeds(
     if len(merged) < desired and browser_enabled:
         try:
             browser_rows = collect_fastmoss_browser(
-                output_dir, countries, max_followers, desired - len(merged), headed
+                output_dir, countries, max_followers, desired - len(merged), headed,
+                resume=resume, min_delay_ms=browser_min_delay_ms,
+                max_delay_ms=browser_max_delay_ms,
             )
             merged.update({
                 row["username"]: normalize_shop_proof(row) for row in browser_rows
@@ -132,6 +137,8 @@ def main() -> int:
     parser.add_argument("--fastmoss-export", action="append", default=[])
     parser.add_argument("--no-fastmoss-browser", action="store_true")
     parser.add_argument("--fastmoss-headed", action="store_true")
+    parser.add_argument("--browser-min-delay-ms", type=int, default=2500)
+    parser.add_argument("--browser-max-delay-ms", type=int, default=6500)
     parser.add_argument("--output-dir", default="output/tts_fastmoss")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--skip-email-dns", action="store_true")
@@ -140,6 +147,8 @@ def main() -> int:
 
     if args.target < 1 or args.max_followers < 1 or args.pool_multiplier < 1:
         parser.error("target, max-followers and pool-multiplier must be positive")
+    if args.browser_min_delay_ms < 1000 or args.browser_max_delay_ms < args.browser_min_delay_ms:
+        parser.error("browser pacing must be at least 1000 ms and max >= min")
     countries = {country.upper() for country in args.countries}
     unknown = countries - SUPPORTED_COUNTRIES
     if unknown:
@@ -156,6 +165,9 @@ def main() -> int:
         desired_pool,
         not args.no_fastmoss_browser,
         args.fastmoss_headed,
+        args.resume,
+        args.browser_min_delay_ms,
+        args.browser_max_delay_ms,
     )
     if not seeds:
         request = {

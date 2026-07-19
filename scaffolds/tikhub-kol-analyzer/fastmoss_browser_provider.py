@@ -15,6 +15,9 @@ def collect_fastmoss_browser(
     max_followers: int,
     desired: int,
     headed: bool = False,
+    resume: bool = True,
+    min_delay_ms: int = 2500,
+    max_delay_ms: int = 6500,
 ) -> list[dict]:
     base = Path(__file__).resolve().parent
     output = Path(output_dir) / "fastmoss_browser_candidates.csv"
@@ -33,10 +36,17 @@ def collect_fastmoss_browser(
         node, str(base / "fastmoss_browser.mjs"),
         "--output", str(output), "--target", str(desired),
         "--max-followers", str(max_followers),
+        "--min-delay-ms", str(min_delay_ms),
+        "--max-delay-ms", str(max_delay_ms),
     ]
     if headed:
         command.append("--headed")
-    completed = subprocess.run(command, env=env, text=True, capture_output=True, timeout=3600)
+    if resume:
+        command.append("--resume")
+    completed = subprocess.run(
+        command, env=env, stdin=subprocess.DEVNULL,
+        text=True, capture_output=True, timeout=3600,
+    )
     if completed.returncode:
         detail = (completed.stderr or completed.stdout).strip().splitlines()
         raise RuntimeError(detail[-1] if detail else "FastMoss browser collection failed")

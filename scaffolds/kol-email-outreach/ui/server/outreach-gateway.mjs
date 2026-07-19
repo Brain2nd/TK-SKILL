@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
@@ -14,7 +14,7 @@ import {
 } from "../../lib/outreach_journal.mjs";
 import { withRunLock } from "../../lib/run_lock.mjs";
 import { normalizeEmail, sanitizeSubject, validateMessage } from "../../lib/outreach_policy.mjs";
-import { sendThreaded } from "../../lib/email_thread_builder.mjs";
+import { buildEmail, sendThreaded } from "../../lib/email_thread_builder.mjs";
 import { personalizeHook } from "../../lib/claude_personalizer.mjs";
 import { canonicalBatchSnapshot, canonicalItemPayload } from "../lib/outreach-contract.mjs";
 
@@ -30,6 +30,7 @@ const requireFromCore = createRequire(resolve(coreRoot, "package.json"));
 const nodemailer = requireFromCore("nodemailer");
 
 const accounts = new Map();
+const oauthStates = new Map();
 const aiProfiles = new Map();
 const personalizationCache = new Map();
 const jobs = new Map();
@@ -49,6 +50,41 @@ function json(res, status, payload) {
     "Cache-Control": "no-store",
   });
   res.end(body);
+}
+
+function html(res, status, body) {
+  res.writeHead(status, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Content-Length": Buffer.byteLength(body),
+    "Cache-Control": "no-store",
+    "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'",
+  });
+  res.end(body);
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character]);
+}
+
+function oauthUiOrigin() {
+  try {
+    const value = new URL(process.env.LOOP_UI_ORIGIN || "http://127.0.0.1:8877");
+    if (value.protocol !== "http:" || !["127.0.0.1", "localhost", "::1"].includes(value.hostname)) throw new Error();
+    return value.origin;
+  } catch {
+    return "http://127.0.0.1:8877";
+  }
+}
+
+function oauthRedirectUri() {
+  const value = new URL(process.env.LOOP_OAUTH_REDIRECT_URI || "http://127.0.0.1:8878/oauth/callback");
+  if (value.protocol !== "http:" || !["127.0.0.1", "localhost", "::1"].includes(value.hostname) ||
+    value.pathname !== "/oauth/callback" || value.username || value.password || value.search || value.hash) {
+    throw new Error("LOOP_OAUTH_REDIRECT_URI must be a local http:// loopback /oauth/callback URL");
+  }
+  return value.toString();
 }
 
 async function bodyJson(req) {
@@ -73,10 +109,13 @@ function publicAccount(account) {
     smtp_host: account.smtpHost,
     smtp_port: account.smtpPort,
     secure: account.secure,
+    provider: account.provider || "custom",
+    auth_mode: account.authMode || "smtp",
     daily_cap: account.dailyCap,
-    configured: Boolean(account.password),
+    configured: Boolean(account.password || account.accessToken || account.refreshToken),
     verified: account.verified === true,
     last_verified_at: account.lastVerifiedAt || "",
+    credential_expires_at: account.expiresAt ? new Date(account.expiresAt).toISOString() : "",
   };
 }
 
@@ -110,7 +149,7 @@ export function validateAiProfile(input) {
   return { ownerKey, provider, model, apiKey, configuredAt: new Date().toISOString() };
 }
 
-function validatePersonalizationRequest(input) {
+export function validatePersonalizationRequest(input) {
   const ownerKey = String(input.owner_key || "").trim().toLowerCase();
   const snapshotHash = String(input.snapshot_hash || "").trim().toLowerCase();
   const project = input.project && typeof input.project === "object" ? input.project : {};
@@ -124,6 +163,17 @@ function validatePersonalizationRequest(input) {
     const recipientId = String(recipient.recipient_id || "").trim();
     if (!recipientId || recipientIds.has(recipientId)) throw new Error("duplicate or missing personalization recipient id");
     recipientIds.add(recipientId);
+    const bio = String(recipient.bio || "").trim();
+    const contentTraits = String(recipient.style_summary || "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter((value) => value && !/^(?:city|country):/i.test(value));
+    const recentVideos = Array.isArray(recipient.recent_videos)
+      ? recipient.recent_videos.filter((video) => String(video?.description || video?.desc || video?.caption || "").trim())
+      : [];
+    if (!bio && !contentTraits.length && !recentVideos.length) {
+      throw new Error(`creator ${String(recipient.handle || recipientId)} has no public content evidence for personalization`);
+    }
   }
   return { ownerKey, snapshotHash, project, recipients };
 }
@@ -207,8 +257,43 @@ export function validateSenderInput(input) {
     smtpHost,
     smtpPort,
     secure: input.secure !== false,
+    provider: "custom",
+    authMode: "smtp",
     dailyCap,
     password,
+    verified: false,
+    lastVerifiedAt: "",
+  };
+}
+
+export function validateOAuthSenderInput(input) {
+  const senderId = String(input.id || `sender_${randomUUID()}`).trim();
+  const ownerKey = String(input.owner_key || "").trim().toLowerCase();
+  const provider = String(input.provider || "").trim().toLowerCase();
+  const email = normalizeEmail(input.from_email);
+  const replyTo = input.reply_to_email ? normalizeEmail(input.reply_to_email) : "";
+  const fromName = String(input.from_name || "").trim();
+  const dailyCap = Number(input.daily_cap ?? 50);
+  if (!/^[a-f0-9]{16}$/.test(ownerKey)) throw new Error("invalid sender owner scope");
+  if (!/^[a-z0-9._-]{1,120}$/i.test(senderId)) throw new Error("invalid sender id");
+  if (!email) throw new Error("invalid sender email");
+  if (input.reply_to_email && !replyTo) throw new Error("invalid reply-to email");
+  if (!['gmail', 'outlook'].includes(provider)) throw new Error("OAuth provider must be gmail or outlook");
+  if (!fromName || fromName.length > 80 || /\r|\n/.test(fromName)) throw new Error("invalid sender name");
+  if (!Number.isInteger(dailyCap) || dailyCap < 1 || dailyCap > 500) throw new Error("invalid daily sender cap");
+  return {
+    id: senderId,
+    ownerKey,
+    label: String(input.label || fromName).trim().slice(0, 80),
+    fromName,
+    email,
+    replyTo,
+    smtpHost: provider === "gmail" ? "gmail.googleapis.com" : "graph.microsoft.com",
+    smtpPort: 443,
+    secure: true,
+    provider,
+    authMode: "oauth",
+    dailyCap,
     verified: false,
     lastVerifiedAt: "",
   };
@@ -224,6 +309,198 @@ function smtpFor(account) {
     greetingTimeout: 20000,
     socketTimeout: 60000,
   };
+}
+
+function oauthConfig(provider) {
+  const redirectUri = oauthRedirectUri();
+  if (provider === "gmail") {
+    const clientId = String(process.env.LOOP_GOOGLE_OAUTH_CLIENT_ID || "").trim();
+    if (!clientId) throw new Error("Google OAuth is not configured: set LOOP_GOOGLE_OAUTH_CLIENT_ID");
+    return {
+      provider,
+      clientId,
+      clientSecret: String(process.env.LOOP_GOOGLE_OAUTH_CLIENT_SECRET || "").trim(),
+      redirectUri,
+      authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+      tokenUrl: "https://oauth2.googleapis.com/token",
+      profileUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
+      scopes: ["openid", "email", "https://www.googleapis.com/auth/gmail.send"],
+    };
+  }
+  const clientId = String(process.env.LOOP_MICROSOFT_OAUTH_CLIENT_ID || "").trim();
+  const tenant = String(process.env.LOOP_MICROSOFT_OAUTH_TENANT || "common").trim();
+  if (!clientId) throw new Error("Microsoft OAuth is not configured: set LOOP_MICROSOFT_OAUTH_CLIENT_ID");
+  if (!/^[a-z0-9.-]+$/i.test(tenant)) throw new Error("invalid Microsoft OAuth tenant");
+  return {
+    provider,
+    clientId,
+    clientSecret: String(process.env.LOOP_MICROSOFT_OAUTH_CLIENT_SECRET || "").trim(),
+    redirectUri,
+    authorizeUrl: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize`,
+    tokenUrl: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`,
+    profileUrl: "https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName,displayName",
+    scopes: ["openid", "email", "offline_access", "User.Read", "Mail.Send"],
+  };
+}
+
+function oauthError(message) {
+  const error = new Error(message);
+  error.code = "OAUTH_AUTH";
+  return error;
+}
+
+async function postOauthForm(url, values) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(Object.entries(values).filter(([, value]) => value !== "")),
+    signal: AbortSignal.timeout(30000),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw oauthError(String(payload.error_description || payload.error || `OAuth token HTTP ${response.status}`).slice(0, 300));
+  return payload;
+}
+
+export function createOAuthAuthorization(input) {
+  const sender = validateOAuthSenderInput(input);
+  const config = oauthConfig(sender.provider);
+  const state = randomBytes(24).toString("base64url");
+  const verifier = randomBytes(48).toString("base64url");
+  const challenge = createHash("sha256").update(verifier).digest("base64url");
+  const expiresAt = Date.now() + 10 * 60 * 1000;
+  oauthStates.set(state, { sender, verifier, expiresAt });
+  for (const [key, pending] of oauthStates) {
+    if (pending.expiresAt < Date.now()) oauthStates.delete(key);
+  }
+  const query = new URLSearchParams({
+    client_id: config.clientId,
+    redirect_uri: config.redirectUri,
+    response_type: "code",
+    scope: config.scopes.join(" "),
+    state,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+  });
+  if (sender.provider === "gmail") {
+    query.set("access_type", "offline");
+    query.set("prompt", "consent");
+  } else {
+    query.set("response_mode", "query");
+    query.set("prompt", "select_account");
+  }
+  return { sender, state, authorizationUrl: `${config.authorizeUrl}?${query}` };
+}
+
+async function fetchOauthProfile(config, accessToken) {
+  const response = await fetch(config.profileUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(30000),
+  });
+  const profile = await response.json().catch(() => ({}));
+  if (!response.ok) throw oauthError(`OAuth profile verification failed (HTTP ${response.status})`);
+  if (config.provider === "gmail" && profile.verified_email !== true) throw oauthError("Google account email is not verified");
+  const email = normalizeEmail(config.provider === "gmail" ? profile.email : (profile.mail || profile.userPrincipalName));
+  if (!email) throw oauthError("OAuth provider did not return a usable email address");
+  return { email, displayName: String(profile.name || profile.displayName || "") };
+}
+
+async function completeOAuthAuthorization(state, code) {
+  const pending = oauthStates.get(state);
+  oauthStates.delete(state);
+  if (!pending || pending.expiresAt < Date.now()) throw oauthError("OAuth state is missing or expired; start the connection again");
+  if (!code) throw oauthError("OAuth provider did not return an authorization code");
+  const config = oauthConfig(pending.sender.provider);
+  const token = await postOauthForm(config.tokenUrl, {
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    redirect_uri: config.redirectUri,
+    grant_type: "authorization_code",
+    code,
+    code_verifier: pending.verifier,
+    scope: config.provider === "outlook" ? config.scopes.join(" ") : "",
+  });
+  const profile = await fetchOauthProfile(config, token.access_token);
+  if (profile.email !== pending.sender.email) {
+    throw oauthError(`authorized account ${profile.email} does not match configured sender ${pending.sender.email}`);
+  }
+  const account = {
+    ...pending.sender,
+    accessToken: String(token.access_token || ""),
+    refreshToken: String(token.refresh_token || ""),
+    expiresAt: Date.now() + Math.max(60, Number(token.expires_in || 3600)) * 1000,
+    verified: true,
+    lastVerifiedAt: new Date().toISOString(),
+  };
+  accounts.set(accountKey(account.ownerKey, account.id), account);
+  return account;
+}
+
+async function ensureOAuthAccessToken(account) {
+  if (account.accessToken && account.expiresAt > Date.now() + 60_000) return account.accessToken;
+  if (!account.refreshToken) throw oauthError("OAuth session expired and has no refresh token; reconnect the sender");
+  const config = oauthConfig(account.provider);
+  const token = await postOauthForm(config.tokenUrl, {
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    grant_type: "refresh_token",
+    refresh_token: account.refreshToken,
+    scope: config.provider === "outlook" ? config.scopes.join(" ") : "",
+  });
+  account.accessToken = String(token.access_token || "");
+  account.refreshToken = String(token.refresh_token || account.refreshToken);
+  account.expiresAt = Date.now() + Math.max(60, Number(token.expires_in || 3600)) * 1000;
+  return account.accessToken;
+}
+
+async function mimeMessage(args) {
+  const options = await buildEmail(args);
+  delete options._isReply;
+  delete options._chain;
+  const transporter = nodemailer.createTransport({ streamTransport: true, buffer: true, newline: "unix" });
+  const result = await transporter.sendMail(options);
+  return Buffer.isBuffer(result.message) ? result.message : Buffer.from(result.message);
+}
+
+async function sendWithOAuth(account, args) {
+  let token;
+  let message;
+  try {
+    token = await ensureOAuthAccessToken(account);
+    message = await mimeMessage(args);
+  } catch (error) {
+    return { ok: false, uncertain: false, errorCode: error?.code || "OAUTH_BUILD", error: error?.message || String(error) };
+  }
+  const encoded = message.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  try {
+    const response = account.provider === "gmail"
+      ? await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ raw: encoded }),
+          signal: AbortSignal.timeout(60000),
+        })
+      : await fetch("https://graph.microsoft.com/v1.0/me/sendMail", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "text/plain" },
+          body: message.toString("base64"),
+          signal: AbortSignal.timeout(60000),
+        });
+    if (response.ok) return { ok: true, messageId: args.messageId, uncertain: false };
+    const authFailure = [401, 403].includes(response.status);
+    return {
+      ok: false,
+      uncertain: response.status >= 500,
+      errorCode: authFailure ? "OAUTH_AUTH" : `HTTP_${response.status}`,
+      error: `${account.provider} send API HTTP ${response.status}`,
+    };
+  } catch (error) {
+    return { ok: false, uncertain: true, errorCode: "OAUTH_NETWORK", error: error?.message || String(error) };
+  }
+}
+
+async function sendWithAccount(account, args) {
+  if (account.authMode === "oauth") return sendWithOAuth(account, args);
+  return sendThreaded({ ...args, smtp: smtpFor(account) });
 }
 
 async function readSenderState() {
@@ -534,8 +811,8 @@ async function executeJob(job) {
 
         let delivery;
         try {
-          delivery = await sendThreaded({
-            creatorHandle: item.handle, smtp: smtpFor(account), from: `${account.fromName} <${account.email}>`,
+          delivery = await sendWithAccount(account, {
+            creatorHandle: item.handle, from: `${account.fromName} <${account.email}>`,
             replyTo: item.reply_to_email || undefined, to: item.recipient_email, subject: item.subject,
             body: item.body, messageId, threadMode: "new",
           });
@@ -549,9 +826,9 @@ async function executeJob(job) {
             await journal.append({ event: "sent", event_at: sentAt, ...reservation, provider_message_id: delivery.messageId || messageId });
             setResult(job, { item_id: item.id, status: "sent", message_id: delivery.messageId || messageId, error: "", sent_at: sentAt });
           } catch (error) {
-            setResult(job, { item_id: item.id, status: "delivery_unknown", message_id: messageId, error: `SMTP accepted but sent journal failed: ${error?.message || String(error)}`, sent_at: "" });
+            setResult(job, { item_id: item.id, status: "delivery_unknown", message_id: messageId, error: `provider accepted but sent journal failed: ${error?.message || String(error)}`, sent_at: "" });
             job.status = "delivery_unknown";
-            job.error = "SMTP 已返回成功，但本地确认落盘失败；必须人工核对，禁止重试";
+            job.error = "邮件服务商已返回成功，但本地确认落盘失败；必须人工核对，禁止重试";
             job.pauseRequested = true;
           }
         } else if (delivery.uncertain === true) {
@@ -573,7 +850,7 @@ async function executeJob(job) {
             job.error = "邮件结果无法可靠落盘；已按投递未知处理并停止全部后续发送";
             job.pauseRequested = true;
           }
-          if (delivery.errorCode === "EAUTH" && job.status !== "delivery_unknown") {
+          if (["EAUTH", "OAUTH_AUTH"].includes(delivery.errorCode) && job.status !== "delivery_unknown") {
             account.verified = false;
             job.status = "paused";
             job.error = "发件账号认证失败；已暂停后续发送";
@@ -641,6 +918,19 @@ async function enqueue(payload) {
 async function route(req, res) {
   if (!isLoopback(req.socket.remoteAddress)) return json(res, 403, { ok: false, error: "loopback only" });
   const url = new URL(req.url, "http://127.0.0.1");
+  if (req.method === "GET" && url.pathname === "/oauth/callback") {
+    try {
+      if (url.searchParams.get("error")) throw oauthError(String(url.searchParams.get("error_description") || url.searchParams.get("error")).slice(0, 300));
+      const account = await completeOAuthAuthorization(
+        String(url.searchParams.get("state") || ""),
+        String(url.searchParams.get("code") || ""),
+      );
+      const message = { type: "loop-oauth-complete", sender_id: account.id, provider: account.provider };
+      return html(res, 200, `<!doctype html><meta charset="utf-8"><title>邮箱连接成功</title><style>body{font:16px system-ui;background:#f4f8f6;color:#21322e;display:grid;place-items:center;min-height:100vh;margin:0}.card{background:white;padding:32px;border-radius:16px;box-shadow:0 16px 50px #173b2e18;max-width:420px}b{display:block;font-size:22px;margin-bottom:10px}p{line-height:1.6;color:#60706c}</style><div class="card"><b>邮箱连接成功</b><p>${escapeHtml(account.email)} 已获得发送授权。此窗口会自动关闭。</p></div><script>window.opener?.postMessage(${JSON.stringify(message)},${JSON.stringify(oauthUiOrigin())});setTimeout(()=>window.close(),800)</script>`);
+    } catch (error) {
+      return html(res, 400, `<!doctype html><meta charset="utf-8"><title>邮箱连接失败</title><style>body{font:16px system-ui;padding:40px;color:#742d2d}p{max-width:700px;line-height:1.6}</style><h1>邮箱连接失败</h1><p>${escapeHtml(error?.message || String(error))}</p><p>请关闭此页并回到 LOOP 重新连接。</p>`);
+    }
+  }
   if (req.method === "GET" && url.pathname === "/health") {
     const circuit = deliveryCircuitFrom(await journal.entries(), "");
     return json(res, 200, { ok: true, service: "loop-outreach-gateway", circuit });
@@ -672,6 +962,19 @@ async function route(req, res) {
         .map((account) => ({ ...publicAccount(account), sent_today: Number(state.counts[account.email] || 0) })),
     });
   }
+  if (req.method === "POST" && url.pathname === "/oauth/start") {
+    const authorization = createOAuthAuthorization(await bodyJson(req));
+    return json(res, 201, {
+      ok: true,
+      oauth: {
+        sender_id: authorization.sender.id,
+        provider: authorization.sender.provider,
+        authorization_url: authorization.authorizationUrl,
+        expires_in: 600,
+      },
+      sender: publicAccount(authorization.sender),
+    });
+  }
   if (req.method === "POST" && url.pathname === "/senders") {
     const account = validateSenderInput(await bodyJson(req));
     accounts.set(accountKey(account.ownerKey, account.id), account);
@@ -683,14 +986,21 @@ async function route(req, res) {
     const account = accounts.get(accountKey(ownerKey, decodeURIComponent(verifyMatch[1])));
     if (!account) return json(res, 404, { ok: false, error: "sender not configured in this gateway session" });
     try {
-      const transporter = nodemailer.createTransport(smtpFor(account));
-      await transporter.verify();
+      if (account.authMode === "oauth") {
+        const config = oauthConfig(account.provider);
+        const token = await ensureOAuthAccessToken(account);
+        const profile = await fetchOauthProfile(config, token);
+        if (profile.email !== account.email) throw oauthError("authorized account no longer matches the configured sender");
+      } else {
+        const transporter = nodemailer.createTransport(smtpFor(account));
+        await transporter.verify();
+      }
       account.verified = true;
       account.lastVerifiedAt = new Date().toISOString();
       return json(res, 200, { ok: true, sender: publicAccount(account) });
     } catch (error) {
       account.verified = false;
-      return json(res, 400, { ok: false, error: `SMTP verification failed: ${error?.message || String(error)}` });
+      return json(res, 400, { ok: false, error: `Sender verification failed: ${error?.message || String(error)}` });
     }
   }
   if (req.method === "POST" && url.pathname === "/execute") {

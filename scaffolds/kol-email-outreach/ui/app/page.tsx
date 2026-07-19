@@ -14,6 +14,8 @@ We have a paid TikTok Shop short-form video posting opportunity.
 
 We will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.
 
+Here is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/
+
 Would you be interested in collaborating with us?
 
 {{sender_name}}`;
@@ -206,7 +208,7 @@ function ProjectWorkspace({ workspace, project, busy, postWorkspace, openRecipie
             <label><span>项目默认发件邮箱</span><select disabled={sentLocked} value={senderId} onChange={(e) => setSenderId(e.target.value)}><option value="">未配置</option>{workspace.senders.map((item: any) => <option key={item.id} value={item.id}>{item.label} · {item.from_email} · {item.verification_status === "verified" ? "已验证" : "待验证"}</option>)}</select></label>
           </div>
           {!senderId && <div className="inline-warning">生成审批批次前必须选择一个已验证发件邮箱。</div>}
-          {senderId && sender?.verification_status !== "verified" && <div className="inline-warning">{sender?.from_email || "该邮箱"} 尚未验证 SMTP 连接，不能进入正式审批。</div>}
+          {senderId && sender?.verification_status !== "verified" && <div className="inline-warning">{sender?.from_email || "该邮箱"} 尚未验证发件连接，不能进入正式审批。</div>}
           <div className="form-stack template-editor">
             <label><span>英文主题</span><input disabled={sentLocked} value={subject} onChange={(e) => setSubject(e.target.value)} lang="en" /></label>
             <label><span>英文正文</span><textarea disabled={sentLocked} rows={13} value={body} onChange={(e) => setBody(e.target.value)} lang="en" /></label>
@@ -352,31 +354,74 @@ function SenderAccounts({ workspace, busy, postSend }: any) {
   const [aiModel, setAiModel] = useState(workspace.gateway?.ai?.model || "claude-sonnet-4-6");
   const [aiKey, setAiKey] = useState("");
   const runtimeById = new Map((workspace.runtime_senders || []).map((sender: any) => [sender.id, sender]));
+  const providerLabels: Record<string, string> = { gmail: "Gmail API", outlook: "Microsoft Graph", custom: "自定义 SMTP" };
 
   function chooseProvider(value: string) {
     setProvider(value);
-    if (value === "gmail") { setHost("smtp.gmail.com"); setPort(465); setSecure(true); }
-    if (value === "outlook") { setHost("smtp.office365.com"); setPort(587); setSecure(false); }
+    if (value === "gmail") { setLabel((current) => current || "Gmail"); setHost("gmail.googleapis.com"); setPort(443); setSecure(true); }
+    if (value === "outlook") { setLabel((current) => current || "Outlook"); setHost("graph.microsoft.com"); setPort(443); setSecure(true); }
+    if (value === "custom") { setHost("smtp.example.com"); setPort(465); setSecure(true); }
   }
   function edit(sender: any) {
     setEditingId(sender.id); setLabel(sender.label); setFromName(sender.from_name); setFromEmail(sender.from_email);
     setReplyTo(sender.reply_to_email || ""); setHost(sender.smtp_host); setPort(sender.smtp_port); setSecure(Boolean(sender.secure));
-    setDailyCap(sender.daily_cap); setPassword(""); setProvider("custom");
+    setDailyCap(sender.daily_cap); setPassword(""); setProvider(sender.provider || (sender.auth_mode === "oauth" ? "gmail" : "custom"));
+  }
+  async function submitSender(event: React.FormEvent) {
+    event.preventDefault();
+    const sender = {
+      id: editingId || undefined, label, from_name: fromName, from_email: fromEmail,
+      reply_to_email: replyTo, smtp_host: host, smtp_port: port, secure, daily_cap: dailyCap,
+    };
+    if (provider === "custom") {
+      await postSend({ action: "configure_sender", sender: { ...sender, password } });
+      setPassword("");
+      return;
+    }
+    const popup = window.open("about:blank", `loop-oauth-${provider}`, "popup,width=560,height=720");
+    if (!popup) throw new Error("浏览器阻止了授权窗口，请允许本站打开弹窗后重试");
+    popup.document.title = "正在连接邮箱";
+    popup.document.body.innerHTML = '<p style="font:16px system-ui;padding:32px">正在准备官方授权页面…</p>';
+    let finished = false;
+    let poll = 0;
+    const finish = async (senderId: string) => {
+      if (finished) return;
+      finished = true;
+      window.removeEventListener("message", onMessage);
+      if (poll) window.clearInterval(poll);
+      await postSend({ action: "verify_sender", sender_id: senderId });
+    };
+    const onMessage = (message: MessageEvent) => {
+      if (message.origin !== "http://127.0.0.1:8878" || message.data?.type !== "loop-oauth-complete") return;
+      finish(String(message.data.sender_id || "")).catch(() => {});
+    };
+    window.addEventListener("message", onMessage);
+    try {
+      const result = await postSend({ action: "start_oauth_sender", sender: { ...sender, provider } });
+      popup.location.href = result.oauth.authorization_url;
+      poll = window.setInterval(() => {
+        if (!popup.closed || finished) return;
+        finish(String(result.oauth.sender_id || "")).catch(() => {});
+      }, 800);
+    } catch (error) {
+      window.removeEventListener("message", onMessage);
+      if (poll) window.clearInterval(poll);
+      popup.close();
+      throw error;
+    }
   }
   return (
     <>
-      <div className="page-heading"><div><p className="eyebrow">SENDER ACCOUNTS</p><h1>邮箱账户</h1><p className="lede">发件人可在前端配置并由项目选择；应用密码是只写字段，只保存在当前本地发送进程内，不会写入数据库或返回浏览器。</p></div><Pill tone={workspace.gateway?.online ? "green" : "red"}>{workspace.gateway?.online ? "本地网关在线" : "发送网关离线"}</Pill></div>
+      <div className="page-heading"><div><p className="eyebrow">SENDER ACCOUNTS</p><h1>邮箱账户</h1><p className="lede">Gmail 和 Outlook 只需填写邮箱并完成一次官方授权；自定义邮箱仍可使用 SMTP。令牌和密码都不会写入项目数据库。</p></div><Pill tone={workspace.gateway?.online ? "green" : "red"}>{workspace.gateway?.online ? "本地网关在线" : "发送网关离线"}</Pill></div>
       <section className="sender-layout">
         <article className="panel sender-list"><div className="section-title-row compact"><div><p className="eyebrow">VERIFIED IDENTITIES</p><h2>已配置发件身份</h2></div><span>{workspace.senders.length} 个</span></div>
-          {workspace.senders.length ? workspace.senders.map((sender: any) => { const runtime: any = runtimeById.get(sender.id); return <div className="sender-row" key={sender.id}><Avatar name={sender.from_name}/><div><b>{sender.label}</b><span>{sender.from_name} &lt;{sender.from_email}&gt;</span><small>{sender.smtp_host}:{sender.smtp_port} · 今日 {runtime?.sent_today || 0}/{sender.daily_cap}</small></div><div className="sender-status"><Pill tone={runtime?.verified ? "green" : runtime?.configured ? "amber" : "red"}>{runtime?.verified ? "连接已验证" : runtime?.configured ? "待验证" : "需重新输入密码"}</Pill><button className="text-button" onClick={() => edit(sender)}>编辑</button><button className="text-button" disabled={busy || !runtime?.configured} onClick={() => postSend({ action: "verify_sender", sender_id: sender.id })}>测试连接</button></div></div>}) : <div className="mini-empty">尚未添加发件邮箱。配置并验证后，项目才能生成审批批次。</div>}
+          {workspace.senders.length ? workspace.senders.map((sender: any) => { const runtime: any = runtimeById.get(sender.id); const oauth = sender.auth_mode === "oauth"; return <div className="sender-row" key={sender.id}><Avatar name={sender.from_name}/><div><b>{sender.label}</b><span>{sender.from_name} &lt;{sender.from_email}&gt;</span><small>{providerLabels[sender.provider] || "自定义 SMTP"} · 今日 {runtime?.sent_today || 0}/{sender.daily_cap}</small></div><div className="sender-status"><Pill tone={runtime?.verified ? "green" : runtime?.configured ? "amber" : "red"}>{runtime?.verified ? "连接已验证" : runtime?.configured ? "待验证" : oauth ? "需重新授权" : "需重新输入密码"}</Pill><button className="text-button" onClick={() => edit(sender)}>{oauth ? "重新连接" : "编辑"}</button><button className="text-button" disabled={busy || !runtime?.configured} onClick={() => postSend({ action: "verify_sender", sender_id: sender.id })}>测试连接</button></div></div>}) : <div className="mini-empty">尚未添加发件邮箱。连接并验证后，项目才能生成审批批次。</div>}
         </article>
         <article className="panel sender-form"><p className="eyebrow">{editingId ? "RECONFIGURE" : "ADD SENDER"}</p><h2>{editingId ? "重新配置邮箱" : "添加发件邮箱"}</h2>
-          <form onSubmit={(event) => { event.preventDefault(); postSend({ action: "configure_sender", sender: { id: editingId || undefined, label, from_name: fromName, from_email: fromEmail, reply_to_email: replyTo, smtp_host: host, smtp_port: port, secure, daily_cap: dailyCap, password } }).then(() => setPassword("")); }}>
-            <div className="form-grid two"><label><span>服务商</span><select value={provider} onChange={(e) => chooseProvider(e.target.value)}><option value="gmail">Gmail</option><option value="outlook">Outlook / Microsoft 365</option><option value="custom">自定义 SMTP</option></select></label><label><span>账户标签</span><input required value={label} onChange={(e) => setLabel(e.target.value)}/></label><label><span>显示名称</span><input required value={fromName} onChange={(e) => setFromName(e.target.value)}/></label><label><span>From 邮箱</span><input type="email" required value={fromEmail} onChange={(e) => setFromEmail(e.target.value)}/></label><label><span>Reply-To（可选）</span><input type="email" value={replyTo} onChange={(e) => setReplyTo(e.target.value)}/></label><label><span>每日上限</span><input type="number" min="1" max="500" value={dailyCap} onChange={(e) => setDailyCap(Number(e.target.value))}/></label><label><span>SMTP Host</span><input required value={host} onChange={(e) => setHost(e.target.value)} disabled={provider !== "custom"}/></label><label><span>端口</span><input required type="number" value={port} onChange={(e) => setPort(Number(e.target.value))} disabled={provider !== "custom"}/></label></div>
-            <label className="check-label"><input type="checkbox" checked={secure} onChange={(e) => setSecure(e.target.checked)}/>SMTP over TLS（465 通常开启；587 通常关闭后使用 STARTTLS）</label>
-            <label className="password-field"><span>应用密码 / SMTP Password</span><input type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="只写，不会回显"/></label>
-            <div className="secret-note">密码只保存在当前本地发送网关的内存中。关闭或重启网关后需要重新输入；不会写入 D1、日志或页面数据。</div>
-            <button className="primary-button full" disabled={busy || !workspace.gateway?.online}>{busy ? "正在保存…" : "保存配置（下一步测试连接）"}</button>
+          <form onSubmit={submitSender}>
+            <div className="form-grid two"><label><span>连接方式</span><select value={provider} onChange={(e) => chooseProvider(e.target.value)}><option value="gmail">Gmail API（推荐）</option><option value="outlook">Outlook / Microsoft 365</option><option value="custom">自定义 SMTP</option></select></label><label><span>账户标签</span><input required value={label} onChange={(e) => setLabel(e.target.value)}/></label><label><span>显示名称</span><input required value={fromName} onChange={(e) => setFromName(e.target.value)}/></label><label><span>发件邮箱</span><input type="email" required value={fromEmail} onChange={(e) => setFromEmail(e.target.value)}/></label><label><span>Reply-To（可选）</span><input type="email" value={replyTo} onChange={(e) => setReplyTo(e.target.value)}/></label><label><span>每日上限</span><input type="number" min="1" max="500" value={dailyCap} onChange={(e) => setDailyCap(Number(e.target.value))}/></label>{provider === "custom" && <><label><span>SMTP Host</span><input required value={host} onChange={(e) => setHost(e.target.value)}/></label><label><span>端口</span><input required type="number" value={port} onChange={(e) => setPort(Number(e.target.value))}/></label></>}</div>
+            {provider === "custom" ? <><label className="check-label"><input type="checkbox" checked={secure} onChange={(e) => setSecure(e.target.checked)}/>SMTP over TLS（465 通常开启；587 通常关闭后使用 STARTTLS）</label><label className="password-field"><span>应用密码 / SMTP Password</span><input type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="只写，不会回显"/></label><div className="secret-note">密码只保存在当前本地发送网关的内存中，重启后需要重新输入。</div></> : <div className="oauth-note"><b>无需填写邮箱密码</b><span>点击下方按钮后，在 {provider === "gmail" ? "Google" : "Microsoft"} 官方页面确认发信权限。授权令牌只保存在本地网关内存中。</span></div>}
+            <button className="primary-button full" disabled={busy || !workspace.gateway?.online}>{busy ? "正在连接…" : provider === "custom" ? "保存 SMTP 配置（下一步测试）" : `连接 ${provider === "gmail" ? "Gmail" : "Outlook"} 并授权`}</button>
           </form>
         </article>
       </section>
@@ -404,10 +449,10 @@ function Safety({ workspace }: any) {
   const controls = [
     ["不可变审批批次", "From、To、Subject、Body 和项目发件分配使用 SHA-256 锁定"],
     ["批次单次入队", "浏览器只提交一次 run_id，双击和断网重试返回同一运行实例"],
-    ["持久发送日志", "SMTP 调用前先写 sending 并分配稳定 Message-ID"],
+    ["持久发送日志", "邮件服务商调用前先写 sending 并分配稳定 Message-ID"],
     ["全局运行锁", "所有项目共用一把发送锁，禁止并发消耗同一邮箱额度"],
     ["未知投递熔断", "网络结果不明确时立即暂停，绝不自动重试"],
-    ["凭据只写", "应用密码不进入项目数据库、不回显、不写审计日志"],
+    ["凭据只写", "OAuth 令牌和应用密码不进入项目数据库、不回显、不写审计日志"],
   ];
   return <><div className="page-heading"><div><p className="eyebrow">GUARDRAILS / AUDIT</p><h1>安全门禁与审计</h1><p className="lede">项目管理不会绕开首次建联 Agent 的幂等、额度、稳定 Message-ID、运行锁和全局熔断。</p></div><Pill tone={workspace.gateway?.circuit?.open ? "red" : "green"}>{workspace.gateway?.circuit?.open ? "全局熔断已打开" : "外发熔断器正常"}</Pill></div>{workspace.gateway?.circuit?.open && <section className="critical-banner"><b>禁止继续发送</b><p>{workspace.gateway.circuit.reason || "存在未解决的投递结果"}</p></section>}<section className="safety-grid">{controls.map(([title, text], index) => <article className="panel safety-card" key={title}><span className="safety-index">0{index + 1}</span><div><h2>{title}</h2><p>{text}</p></div><Pill tone="green">ACTIVE</Pill></article>)}</section><section className="panel audit-stream"><div className="section-title-row compact"><div><p className="eyebrow">AUDIT EVENTS</p><h2>最近项目事件</h2></div><code>D1 append-only view</code></div>{workspace.audit_events.map((event: any) => <div className="audit-row" key={event.id}><time>{new Date(event.created_at).toLocaleString("zh-CN", { hour12: false })}</time><span className="event-dot"></span><b>{event.event_type}</b><code>{event.entity_id}</code></div>)}</section></>;
 }

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-17T12:10:41.692Z",
+  "generated_at": "2026-07-19T08:17:24.651Z",
   "environment": "LOCAL_SANDBOX",
   "campaign": {
     "id": "spain-tiktok-shop-eur20-test",
@@ -12,10 +12,85 @@
   },
   "test_run": {
     "ok": true,
-    "passed": 97,
+    "passed": 99,
     "failed": 0
   },
   "creators": [
+    {
+      "candidate_id": "tiktok:stephaniaugc_",
+      "username": "stephaniaugc_",
+      "display_name": "@stephaniaugc_",
+      "platform": "TikTok",
+      "Pipeline Stage": "01_FirstOutreach",
+      "email": "stephaniaugc@gmail.com",
+      "Screening Decision": "approved",
+      "Allowed Channels": "email",
+      "followers": 9181,
+      "avg_views": 120451,
+      "engagement_rate": 0.038,
+      "category": "待补充画像",
+      "city": "西班牙",
+      "country": "ES",
+      "profile_url": "https://www.tiktok.com/@stephaniaugc_",
+      "bio": "Sharing timeless and minimal assets 🤍🕊️ Collabs: stephaniaugc@gmail.com",
+      "personalization_traits": [],
+      "review_warnings": [
+        "tiktok_shop_product_link_capability_unverified",
+        "stable_candidate_identity_not_proven_by_snapshot",
+        "email_domain_verified_not_mailbox_confirmed"
+      ]
+    },
+    {
+      "candidate_id": "tiktok:leireugc",
+      "username": "leireugc",
+      "display_name": "@leireugc",
+      "platform": "TikTok",
+      "Pipeline Stage": "01_FirstOutreach",
+      "email": "ugcleirevalles@gmail.com",
+      "Screening Decision": "approved",
+      "Allowed Channels": "email",
+      "followers": 8650,
+      "avg_views": 21405,
+      "engagement_rate": 0.076,
+      "category": "UGC 创作者 · 创作者教育",
+      "city": "西班牙",
+      "country": "ES",
+      "profile_url": "https://www.tiktok.com/@leireugc",
+      "bio": "Conviértete en ✨creadora UGC✨ 📩 ugcleirevalles@gmail.com",
+      "personalization_traits": [
+        "ugc_creator",
+        "creator_education"
+      ],
+      "review_warnings": [
+        "tiktok_shop_product_link_capability_unverified",
+        "stable_candidate_identity_not_proven_by_snapshot",
+        "email_domain_verified_not_mailbox_confirmed"
+      ]
+    },
+    {
+      "candidate_id": "tiktok:hannaxini",
+      "username": "hannaxini",
+      "display_name": "@hannaxini",
+      "platform": "TikTok",
+      "Pipeline Stage": "01_FirstOutreach",
+      "email": "hannaxini@gmail.com",
+      "Screening Decision": "approved",
+      "Allowed Channels": "email",
+      "followers": 7703,
+      "avg_views": 186455,
+      "engagement_rate": 0.0032,
+      "category": "待补充画像",
+      "city": "西班牙",
+      "country": "ES",
+      "profile_url": "https://www.tiktok.com/@hannaxini",
+      "bio": "✨Las mejores ofertas, al mejor precio✨ Home | Mom | Life 💌hannaxini@gmail.com Sígueme para no perderte😉",
+      "personalization_traits": [],
+      "review_warnings": [
+        "tiktok_shop_product_link_capability_unverified",
+        "stable_candidate_identity_not_proven_by_snapshot",
+        "email_domain_verified_not_mailbox_confirmed"
+      ]
+    },
     {
       "candidate_id": "tiktok:soyraka_",
       "username": "soyraka_",
@@ -25,9 +100,9 @@
       "email": "rakaugc@gmail.com",
       "Screening Decision": "approved",
       "Allowed Channels": "email",
-      "followers": 7388,
-      "avg_views": 295826,
-      "engagement_rate": 0.036,
+      "followers": 7377,
+      "avg_views": 116668,
+      "engagement_rate": 0.039,
       "category": "家居装饰 · 时尚穿搭 · 美妆",
       "city": "西班牙",
       "country": "ES",
@@ -46,24 +121,24 @@
       ]
     },
     {
-      "candidate_id": "tiktok:vickyyvalero",
-      "username": "vickyyvalero",
-      "display_name": "@vickyyvalero",
+      "candidate_id": "tiktok:cynthiaducos_",
+      "username": "cynthiaducos_",
+      "display_name": "@cynthiaducos_",
       "platform": "TikTok",
       "Pipeline Stage": "01_FirstOutreach",
-      "email": "victoriaavs99@gmail.com",
+      "email": "ugc.cynthiaducos@gmail.com",
       "Screening Decision": "approved",
       "Allowed Channels": "email",
-      "followers": 5450,
-      "avg_views": 101866,
-      "engagement_rate": 0.08,
-      "category": "美妆 · UGC 创作者",
-      "city": "Murcia",
+      "followers": 6548,
+      "avg_views": 18547,
+      "engagement_rate": 0.0738,
+      "category": "lifestyle · UGC 创作者",
+      "city": "madrid",
       "country": "ES",
-      "profile_url": "https://www.tiktok.com/@vickyyvalero",
-      "bio": "Beauty & UGC ✨ victoriaavs99@gmail.com 📍Murcia/ Madrid",
+      "profile_url": "https://www.tiktok.com/@cynthiaducos_",
+      "bio": "🪩 lifestyle, libros y muchos hobbies 📍madrid, spain (es • fr • en) work 💌 ugc.cynthiaducos@gmail.com +30 marcas ya confían en mí ⭐️",
       "personalization_traits": [
-        "beauty",
+        "lifestyle",
         "ugc_creator"
       ],
       "review_warnings": [
@@ -73,218 +148,131 @@
       ]
     },
     {
-      "candidate_id": "tiktok:paulaasanchezugc",
-      "username": "paulaasanchezugc",
-      "display_name": "@paulaasanchezugc",
+      "candidate_id": "tiktok:povcamilam",
+      "username": "povcamilam",
+      "display_name": "@povcamilam",
       "platform": "TikTok",
       "Pipeline Stage": "01_FirstOutreach",
-      "email": "paulasanchezsanchezugc@gmail.com",
+      "email": "inyeluanmanager@gmail.com",
       "Screening Decision": "approved",
       "Allowed Channels": "email",
-      "followers": 2196,
-      "avg_views": 47423,
-      "engagement_rate": 0.1074,
-      "category": "UGC 创作者 · barcelona",
+      "followers": 6304,
+      "avg_views": 164446,
+      "engagement_rate": 0.0358,
+      "category": "UGC 创作者",
+      "city": "西班牙",
+      "country": "ES",
+      "profile_url": "https://www.tiktok.com/@povcamilam",
+      "bio": "Diseñadora gráfica 🇪🇸 . UGC Creator 💌inyeluanmanager@gmail.com IG @povcamila",
+      "personalization_traits": [
+        "ugc_creator"
+      ],
+      "review_warnings": [
+        "tiktok_shop_product_link_capability_unverified",
+        "stable_candidate_identity_not_proven_by_snapshot",
+        "email_domain_verified_not_mailbox_confirmed"
+      ]
+    },
+    {
+      "candidate_id": "tiktok:aariiadnna",
+      "username": "aariiadnna",
+      "display_name": "@aariiadnna",
+      "platform": "TikTok",
+      "Pipeline Stage": "01_FirstOutreach",
+      "email": "infoariadnagaya@gmail.com",
+      "Screening Decision": "approved",
+      "Allowed Channels": "email",
+      "followers": 6202,
+      "avg_views": 1549,
+      "engagement_rate": 0.1217,
+      "category": "待补充画像",
+      "city": "西班牙",
+      "country": "ES",
+      "profile_url": "https://www.tiktok.com/@aariiadnna",
+      "bio": "🇨🇺🇪🇸 aprendiendo y creando🌷📸 infoariadnagaya@gmail.com💌",
+      "personalization_traits": [],
+      "review_warnings": [
+        "tiktok_shop_product_link_capability_unverified",
+        "stable_candidate_identity_not_proven_by_snapshot",
+        "email_domain_verified_not_mailbox_confirmed"
+      ]
+    },
+    {
+      "candidate_id": "tiktok:itsmarianarr",
+      "username": "itsmarianarr",
+      "display_name": "@itsmarianarr",
+      "platform": "TikTok",
+      "Pipeline Stage": "01_FirstOutreach",
+      "email": "marianar.ugc@gmail.com",
+      "Screening Decision": "approved",
+      "Allowed Channels": "email",
+      "followers": 5871,
+      "avg_views": 593,
+      "engagement_rate": 0.0919,
+      "category": "UGC 创作者",
+      "city": "西班牙",
+      "country": "ES",
+      "profile_url": "https://www.tiktok.com/@itsmarianarr",
+      "bio": "✨vlogs, inspo, outfits, y más✨ 💄👟🌸📸🪞🎀  marianar.ugc@gmail.com",
+      "personalization_traits": [
+        "ugc_creator"
+      ],
+      "review_warnings": [
+        "tiktok_shop_product_link_capability_unverified",
+        "stable_candidate_identity_not_proven_by_snapshot",
+        "email_domain_verified_not_mailbox_confirmed"
+      ]
+    },
+    {
+      "candidate_id": "tiktok:icris.es",
+      "username": "icris.es",
+      "display_name": "@icris.es",
+      "platform": "TikTok",
+      "Pipeline Stage": "01_FirstOutreach",
+      "email": "inquires.cristina@gmail.com",
+      "Screening Decision": "approved",
+      "Allowed Channels": "email",
+      "followers": 5704,
+      "avg_views": 39665,
+      "engagement_rate": 0.0837,
+      "category": "美妆 · fitness",
+      "city": "西班牙",
+      "country": "ES",
+      "profile_url": "https://www.tiktok.com/@icris.es",
+      "bio": "FITNESS | BEAUTY | SELFCARE  IG: icris.es 🫶🏼 📧 inquires.cristina@gmail.com",
+      "personalization_traits": [
+        "beauty",
+        "fitness"
+      ],
+      "review_warnings": [
+        "tiktok_shop_product_link_capability_unverified",
+        "stable_candidate_identity_not_proven_by_snapshot",
+        "email_domain_verified_not_mailbox_confirmed"
+      ]
+    },
+    {
+      "candidate_id": "tiktok:arantxadomi",
+      "username": "arantxadomi",
+      "display_name": "@arantxadomi",
+      "platform": "TikTok",
+      "Pipeline Stage": "01_FirstOutreach",
+      "email": "arantxadomiugc@gmail.com",
+      "Screening Decision": "approved",
+      "Allowed Channels": "email",
+      "followers": 5427,
+      "avg_views": 333738,
+      "engagement_rate": 0.063,
+      "category": "家居装饰 · lifestyle · food",
       "city": "Barcelona",
       "country": "ES",
-      "profile_url": "https://www.tiktok.com/@paulaasanchezugc",
-      "bio": "UGC | Barcelona 💌paulasanchezsanchezugc@gmail.com",
+      "profile_url": "https://www.tiktok.com/@arantxadomi",
+      "bio": "☕️ lifestyle | deco | recetas 🤳🏻 UGC creator & Freelance Social Media 💌 arantxadomiugc@gmail.com 📍Barcelona | Costa Brava",
       "personalization_traits": [
+        "home_decor",
+        "lifestyle",
+        "food",
         "ugc_creator",
         "city:barcelona"
-      ],
-      "review_warnings": [
-        "tiktok_shop_product_link_capability_unverified",
-        "stable_candidate_identity_not_proven_by_snapshot",
-        "email_domain_verified_not_mailbox_confirmed"
-      ]
-    },
-    {
-      "candidate_id": "tiktok:niazuluagaa",
-      "username": "niazuluagaa",
-      "display_name": "@niazuluagaa",
-      "platform": "TikTok",
-      "Pipeline Stage": "01_FirstOutreach",
-      "email": "infoniazuluaga@gmail.com",
-      "Screening Decision": "approved",
-      "Allowed Channels": "email",
-      "followers": 2230,
-      "avg_views": 46338,
-      "engagement_rate": 0.117,
-      "category": "品牌内容",
-      "city": "西班牙",
-      "country": "ES",
-      "profile_url": "https://www.tiktok.com/@niazuluagaa",
-      "bio": "La versatilidad que tú marca necesita ✨ 📩 infoniazuluaga@gmail.com  📍España",
-      "personalization_traits": [
-        "versatile_brand_content"
-      ],
-      "review_warnings": [
-        "tiktok_shop_product_link_capability_unverified",
-        "stable_candidate_identity_not_proven_by_snapshot",
-        "email_domain_verified_not_mailbox_confirmed"
-      ]
-    },
-    {
-      "candidate_id": "tiktok:leireugc",
-      "username": "leireugc",
-      "display_name": "@leireugc",
-      "platform": "TikTok",
-      "Pipeline Stage": "01_FirstOutreach",
-      "email": "ugcleirevalles@gmail.com",
-      "Screening Decision": "approved",
-      "Allowed Channels": "email",
-      "followers": 8598,
-      "avg_views": 21061,
-      "engagement_rate": 0.0764,
-      "category": "UGC 创作者 · 创作者教育",
-      "city": "西班牙",
-      "country": "ES",
-      "profile_url": "https://www.tiktok.com/@leireugc",
-      "bio": "Conviértete en ✨creadora UGC✨ 📩 ugcleirevalles@gmail.com",
-      "personalization_traits": [
-        "ugc_creator",
-        "creator_education"
-      ],
-      "review_warnings": [
-        "tiktok_shop_product_link_capability_unverified",
-        "stable_candidate_identity_not_proven_by_snapshot",
-        "email_domain_verified_not_mailbox_confirmed"
-      ]
-    },
-    {
-      "candidate_id": "tiktok:cathesaavedra",
-      "username": "cathesaavedra",
-      "display_name": "@cathesaavedra",
-      "platform": "TikTok",
-      "Pipeline Stage": "01_FirstOutreach",
-      "email": "cathesaavedraugc@gmail.com",
-      "Screening Decision": "approved",
-      "Allowed Channels": "email",
-      "followers": 1791,
-      "avg_views": 13668,
-      "engagement_rate": 0.0501,
-      "category": "护肤 · UGC 创作者 · 产品测评",
-      "city": "西班牙",
-      "country": "ES",
-      "profile_url": "https://www.tiktok.com/@cathesaavedra",
-      "bio": "💻UGC Creator | Opiniones y Piel Real Ig: @cathesaavedra_ 💌cathesaavedraugc@gmail.com 👇🏽Todos los productos en mi escaparate👇🏽",
-      "personalization_traits": [
-        "skincare",
-        "ugc_creator",
-        "product_reviews",
-        "honest_skin",
-        "shop_bio_signal"
-      ],
-      "review_warnings": [
-        "tiktok_shop_product_link_capability_unverified",
-        "stable_candidate_identity_not_proven_by_snapshot",
-        "email_domain_verified_not_mailbox_confirmed"
-      ]
-    },
-    {
-      "candidate_id": "tiktok:nerea_ugc_",
-      "username": "nerea_ugc_",
-      "display_name": "@nerea_ugc_",
-      "platform": "TikTok",
-      "Pipeline Stage": "01_FirstOutreach",
-      "email": "ugcnereavalles@gmail.com",
-      "Screening Decision": "approved",
-      "Allowed Channels": "email",
-      "followers": 1897,
-      "avg_views": 13126,
-      "engagement_rate": 0.0823,
-      "category": "UGC 创作者 · 品牌故事 · UGC",
-      "city": "西班牙",
-      "country": "ES",
-      "profile_url": "https://www.tiktok.com/@nerea_ugc_",
-      "bio": "Dando vida a las marcas 🤎 📩/ugcnereavalles@gmail.com 👇PORTFOLIO👇",
-      "personalization_traits": [
-        "ugc_creator",
-        "brand_storytelling",
-        "ugc_from_handle"
-      ],
-      "review_warnings": [
-        "tiktok_shop_product_link_capability_unverified",
-        "stable_candidate_identity_not_proven_by_snapshot",
-        "email_domain_verified_not_mailbox_confirmed"
-      ]
-    },
-    {
-      "candidate_id": "tiktok:loga.mode",
-      "username": "loga.mode",
-      "display_name": "@loga.mode",
-      "platform": "TikTok",
-      "Pipeline Stage": "01_FirstOutreach",
-      "email": "ainhoalongares.contacto@gmail.com",
-      "Screening Decision": "approved",
-      "Allowed Channels": "email",
-      "followers": 871,
-      "avg_views": 12733,
-      "engagement_rate": 0.0581,
-      "category": "产品测评",
-      "city": "西班牙",
-      "country": "ES",
-      "profile_url": "https://www.tiktok.com/@loga.mode",
-      "bio": "🧚🏻🌼🦜🌸🌞 📸 Lo pruebo, lo vivo, lo comparto ✉️ ainhoalongares.contacto@gmail.com ⭐️ Más contenido en ig: loga.mode @ainhoa.longares",
-      "personalization_traits": [
-        "product_reviews"
-      ],
-      "review_warnings": [
-        "tiktok_shop_product_link_capability_unverified",
-        "stable_candidate_identity_not_proven_by_snapshot",
-        "email_domain_verified_not_mailbox_confirmed"
-      ]
-    },
-    {
-      "candidate_id": "tiktok:lalaurisita",
-      "username": "lalaurisita",
-      "display_name": "@lalaurisita",
-      "platform": "TikTok",
-      "Pipeline Stage": "01_FirstOutreach",
-      "email": "lauriugc.collabs@gmail.com",
-      "Screening Decision": "approved",
-      "Allowed Channels": "email",
-      "followers": 1683,
-      "avg_views": 12214,
-      "engagement_rate": 0.1528,
-      "category": "护肤 · 美妆 · 旅行",
-      "city": "Barcelona",
-      "country": "ES",
-      "profile_url": "https://www.tiktok.com/@lalaurisita",
-      "bio": "📍 BCN ✨ Skincare | Beauty | Travel  💌 UGC Creator 📩 lauriugc.collabs@gmail.com IG: @lauurisitaa",
-      "personalization_traits": [
-        "skincare",
-        "beauty",
-        "travel",
-        "ugc_creator"
-      ],
-      "review_warnings": [
-        "tiktok_shop_product_link_capability_unverified",
-        "stable_candidate_identity_not_proven_by_snapshot",
-        "email_domain_verified_not_mailbox_confirmed"
-      ]
-    },
-    {
-      "candidate_id": "tiktok:manuuu.ugc",
-      "username": "manuuu.ugc",
-      "display_name": "@manuuu.ugc",
-      "platform": "TikTok",
-      "Pipeline Stage": "01_FirstOutreach",
-      "email": "m44548908@gmail.com",
-      "Screening Decision": "approved",
-      "Allowed Channels": "email",
-      "followers": 1068,
-      "avg_views": 11205,
-      "engagement_rate": 0.0954,
-      "category": "UGC 创作者 · UGC 管理",
-      "city": "西班牙",
-      "country": "ES",
-      "profile_url": "https://www.tiktok.com/@manuuu.ugc",
-      "bio": "UGC Manager España PA: @ughh.manuu🌙 y @estudiaconmanu  ig: @manuuu.ugc  📩 m44548908@gmail.com",
-      "personalization_traits": [
-        "ugc_creator",
-        "ugc_manager"
       ],
       "review_warnings": [
         "tiktok_shop_product_link_capability_unverified",
@@ -308,6 +296,123 @@
     },
     "results": [
       {
+        "handle": "stephaniaugc_",
+        "status": "planned",
+        "reason": "dry_run",
+        "candidate_id": "tiktok:stephaniaugc_",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:stephaniaugc_:step01",
+        "channel": "email",
+        "to": "stephaniaugc@gmail.com",
+        "from": "preview-only@local.invalid",
+        "sender_account": "vira-preview",
+        "subject": "Paid TikTok Shop short-form video opportunity",
+        "body": "Hi!\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
+        "personalization": "template",
+        "content_template_id": "spain-tiktok-shop-eur20",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
+        "outreach_intent": "fixed_offer",
+        "followup_mode": "disabled",
+        "personalization_evidence": [],
+        "personalization_traits": [],
+        "review_warnings": [
+          "tiktok_shop_product_link_capability_unverified",
+          "stable_candidate_identity_not_proven_by_snapshot",
+          "email_domain_verified_not_mailbox_confirmed"
+        ],
+        "creator_profile": {
+          "country": "ES",
+          "profile_url": "https://www.tiktok.com/@stephaniaugc_",
+          "followers": 9181,
+          "avg_views_10": 120451,
+          "engagement_rate": 0.038,
+          "shop_signals": 0,
+          "email_source": "bio",
+          "email_verified": true,
+          "bio": "Sharing timeless and minimal assets 🤍🕊️ Collabs: stephaniaugc@gmail.com"
+        }
+      },
+      {
+        "handle": "leireugc",
+        "status": "planned",
+        "reason": "dry_run",
+        "candidate_id": "tiktok:leireugc",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:leireugc:step01",
+        "channel": "email",
+        "to": "ugcleirevalles@gmail.com",
+        "from": "preview-only@local.invalid",
+        "sender_account": "vira-preview",
+        "subject": "Paid TikTok Shop short-form video opportunity",
+        "body": "Hi!\n\nYour creator-education approach to UGC stood out as especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
+        "personalization": "traits:deterministic",
+        "content_template_id": "spain-tiktok-shop-eur20",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
+        "outreach_intent": "fixed_offer",
+        "followup_mode": "disabled",
+        "personalization_evidence": [
+          "bio",
+          "handle"
+        ],
+        "personalization_traits": [
+          "ugc_creator",
+          "creator_education"
+        ],
+        "review_warnings": [
+          "tiktok_shop_product_link_capability_unverified",
+          "stable_candidate_identity_not_proven_by_snapshot",
+          "email_domain_verified_not_mailbox_confirmed"
+        ],
+        "creator_profile": {
+          "country": "ES",
+          "profile_url": "https://www.tiktok.com/@leireugc",
+          "followers": 8650,
+          "avg_views_10": 21405,
+          "engagement_rate": 0.076,
+          "shop_signals": 0,
+          "email_source": "bio",
+          "email_verified": true,
+          "bio": "Conviértete en ✨creadora UGC✨ 📩 ugcleirevalles@gmail.com"
+        }
+      },
+      {
+        "handle": "hannaxini",
+        "status": "planned",
+        "reason": "dry_run",
+        "candidate_id": "tiktok:hannaxini",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:hannaxini:step01",
+        "channel": "email",
+        "to": "hannaxini@gmail.com",
+        "from": "preview-only@local.invalid",
+        "sender_account": "vira-preview",
+        "subject": "Paid TikTok Shop short-form video opportunity",
+        "body": "Hi!\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
+        "personalization": "template",
+        "content_template_id": "spain-tiktok-shop-eur20",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
+        "outreach_intent": "fixed_offer",
+        "followup_mode": "disabled",
+        "personalization_evidence": [],
+        "personalization_traits": [],
+        "review_warnings": [
+          "tiktok_shop_product_link_capability_unverified",
+          "stable_candidate_identity_not_proven_by_snapshot",
+          "email_domain_verified_not_mailbox_confirmed"
+        ],
+        "creator_profile": {
+          "country": "ES",
+          "profile_url": "https://www.tiktok.com/@hannaxini",
+          "followers": 7703,
+          "avg_views_10": 186455,
+          "engagement_rate": 0.0032,
+          "shop_signals": 0,
+          "email_source": "bio",
+          "email_verified": true,
+          "bio": "✨Las mejores ofertas, al mejor precio✨ Home | Mom | Life 💌hannaxini@gmail.com Sígueme para no perderte😉"
+        }
+      },
+      {
         "handle": "soyraka_",
         "status": "planned",
         "reason": "dry_run",
@@ -318,11 +423,11 @@
         "from": "preview-only@local.invalid",
         "sender_account": "vira-preview",
         "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour home decor, fashion, and beauty-focused UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
+        "body": "Hi!\n\nYour home decor, fashion, and beauty-focused UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
         "personalization": "traits:deterministic",
         "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
         "outreach_intent": "fixed_offer",
         "followup_mode": "disabled",
         "personalization_evidence": [
@@ -342,38 +447,38 @@
         "creator_profile": {
           "country": "ES",
           "profile_url": "https://www.tiktok.com/@soyraka_",
-          "followers": 7388,
-          "avg_views_10": 295826,
-          "engagement_rate": 0.036,
-          "shop_signals": 1,
+          "followers": 7377,
+          "avg_views_10": 116668,
+          "engagement_rate": 0.039,
+          "shop_signals": 0,
           "email_source": "bio",
           "email_verified": true,
           "bio": "💻 Freelance UGC & CM Deco 🛋️ + algo de moda y belleza 🫶🏻 ✨ Embajadöra de @IKEASpain   collabs 📩: rakaugc@gmail.com"
         }
       },
       {
-        "handle": "vickyyvalero",
+        "handle": "cynthiaducos_",
         "status": "planned",
         "reason": "dry_run",
-        "candidate_id": "tiktok:vickyyvalero",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:vickyyvalero:step01",
+        "candidate_id": "tiktok:cynthiaducos_",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:cynthiaducos_:step01",
         "channel": "email",
-        "to": "victoriaavs99@gmail.com",
+        "to": "ugc.cynthiaducos@gmail.com",
         "from": "preview-only@local.invalid",
         "sender_account": "vira-preview",
         "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour beauty-focused UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
+        "body": "Hi!\n\nYour lifestyle-focused UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
         "personalization": "traits:deterministic",
         "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
         "outreach_intent": "fixed_offer",
         "followup_mode": "disabled",
         "personalization_evidence": [
           "bio"
         ],
         "personalization_traits": [
-          "beauty",
+          "lifestyle",
           "ugc_creator"
         ],
         "review_warnings": [
@@ -383,39 +488,202 @@
         ],
         "creator_profile": {
           "country": "ES",
-          "profile_url": "https://www.tiktok.com/@vickyyvalero",
-          "followers": 5450,
-          "avg_views_10": 101866,
-          "engagement_rate": 0.08,
-          "shop_signals": 1,
+          "profile_url": "https://www.tiktok.com/@cynthiaducos_",
+          "followers": 6548,
+          "avg_views_10": 18547,
+          "engagement_rate": 0.0738,
+          "shop_signals": 0,
           "email_source": "bio",
           "email_verified": true,
-          "bio": "Beauty & UGC ✨ victoriaavs99@gmail.com 📍Murcia/ Madrid"
+          "bio": "🪩 lifestyle, libros y muchos hobbies 📍madrid, spain (es • fr • en) work 💌 ugc.cynthiaducos@gmail.com +30 marcas ya confían en mí ⭐️"
         }
       },
       {
-        "handle": "paulaasanchezugc",
+        "handle": "povcamilam",
         "status": "planned",
         "reason": "dry_run",
-        "candidate_id": "tiktok:paulaasanchezugc",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:paulaasanchezugc:step01",
+        "candidate_id": "tiktok:povcamilam",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:povcamilam:step01",
         "channel": "email",
-        "to": "paulasanchezsanchezugc@gmail.com",
+        "to": "inyeluanmanager@gmail.com",
         "from": "preview-only@local.invalid",
         "sender_account": "vira-preview",
         "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour Barcelona-based UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
+        "body": "Hi!\n\nYour experience creating UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
         "personalization": "traits:deterministic",
         "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
         "outreach_intent": "fixed_offer",
         "followup_mode": "disabled",
         "personalization_evidence": [
-          "bio",
-          "handle"
+          "bio"
         ],
         "personalization_traits": [
+          "ugc_creator"
+        ],
+        "review_warnings": [
+          "tiktok_shop_product_link_capability_unverified",
+          "stable_candidate_identity_not_proven_by_snapshot",
+          "email_domain_verified_not_mailbox_confirmed"
+        ],
+        "creator_profile": {
+          "country": "ES",
+          "profile_url": "https://www.tiktok.com/@povcamilam",
+          "followers": 6304,
+          "avg_views_10": 164446,
+          "engagement_rate": 0.0358,
+          "shop_signals": 0,
+          "email_source": "bio",
+          "email_verified": true,
+          "bio": "Diseñadora gráfica 🇪🇸 . UGC Creator 💌inyeluanmanager@gmail.com IG @povcamila"
+        }
+      },
+      {
+        "handle": "aariiadnna",
+        "status": "planned",
+        "reason": "dry_run",
+        "candidate_id": "tiktok:aariiadnna",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:aariiadnna:step01",
+        "channel": "email",
+        "to": "infoariadnagaya@gmail.com",
+        "from": "preview-only@local.invalid",
+        "sender_account": "vira-preview",
+        "subject": "Paid TikTok Shop short-form video opportunity",
+        "body": "Hi!\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
+        "personalization": "template",
+        "content_template_id": "spain-tiktok-shop-eur20",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
+        "outreach_intent": "fixed_offer",
+        "followup_mode": "disabled",
+        "personalization_evidence": [],
+        "personalization_traits": [],
+        "review_warnings": [
+          "tiktok_shop_product_link_capability_unverified",
+          "stable_candidate_identity_not_proven_by_snapshot",
+          "email_domain_verified_not_mailbox_confirmed"
+        ],
+        "creator_profile": {
+          "country": "ES",
+          "profile_url": "https://www.tiktok.com/@aariiadnna",
+          "followers": 6202,
+          "avg_views_10": 1549,
+          "engagement_rate": 0.1217,
+          "shop_signals": 0,
+          "email_source": "bio",
+          "email_verified": true,
+          "bio": "🇨🇺🇪🇸 aprendiendo y creando🌷📸 infoariadnagaya@gmail.com💌"
+        }
+      },
+      {
+        "handle": "itsmarianarr",
+        "status": "planned",
+        "reason": "dry_run",
+        "candidate_id": "tiktok:itsmarianarr",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:itsmarianarr:step01",
+        "channel": "email",
+        "to": "marianar.ugc@gmail.com",
+        "from": "preview-only@local.invalid",
+        "sender_account": "vira-preview",
+        "subject": "Paid TikTok Shop short-form video opportunity",
+        "body": "Hi!\n\nYour experience creating UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
+        "personalization": "traits:deterministic",
+        "content_template_id": "spain-tiktok-shop-eur20",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
+        "outreach_intent": "fixed_offer",
+        "followup_mode": "disabled",
+        "personalization_evidence": [
+          "bio"
+        ],
+        "personalization_traits": [
+          "ugc_creator"
+        ],
+        "review_warnings": [
+          "tiktok_shop_product_link_capability_unverified",
+          "stable_candidate_identity_not_proven_by_snapshot",
+          "email_domain_verified_not_mailbox_confirmed"
+        ],
+        "creator_profile": {
+          "country": "ES",
+          "profile_url": "https://www.tiktok.com/@itsmarianarr",
+          "followers": 5871,
+          "avg_views_10": 593,
+          "engagement_rate": 0.0919,
+          "shop_signals": 0,
+          "email_source": "bio",
+          "email_verified": true,
+          "bio": "✨vlogs, inspo, outfits, y más✨ 💄👟🌸📸🪞🎀  marianar.ugc@gmail.com"
+        }
+      },
+      {
+        "handle": "icris.es",
+        "status": "planned",
+        "reason": "dry_run",
+        "candidate_id": "tiktok:icris.es",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:icris.es:step01",
+        "channel": "email",
+        "to": "inquires.cristina@gmail.com",
+        "from": "preview-only@local.invalid",
+        "sender_account": "vira-preview",
+        "subject": "Paid TikTok Shop short-form video opportunity",
+        "body": "Hi!\n\nYour content around beauty and fitness looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
+        "personalization": "traits:deterministic",
+        "content_template_id": "spain-tiktok-shop-eur20",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
+        "outreach_intent": "fixed_offer",
+        "followup_mode": "disabled",
+        "personalization_evidence": [
+          "bio"
+        ],
+        "personalization_traits": [
+          "beauty",
+          "fitness"
+        ],
+        "review_warnings": [
+          "tiktok_shop_product_link_capability_unverified",
+          "stable_candidate_identity_not_proven_by_snapshot",
+          "email_domain_verified_not_mailbox_confirmed"
+        ],
+        "creator_profile": {
+          "country": "ES",
+          "profile_url": "https://www.tiktok.com/@icris.es",
+          "followers": 5704,
+          "avg_views_10": 39665,
+          "engagement_rate": 0.0837,
+          "shop_signals": 0,
+          "email_source": "bio",
+          "email_verified": true,
+          "bio": "FITNESS | BEAUTY | SELFCARE  IG: icris.es 🫶🏼 📧 inquires.cristina@gmail.com"
+        }
+      },
+      {
+        "handle": "arantxadomi",
+        "status": "planned",
+        "reason": "dry_run",
+        "candidate_id": "tiktok:arantxadomi",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:arantxadomi:step01",
+        "channel": "email",
+        "to": "arantxadomiugc@gmail.com",
+        "from": "preview-only@local.invalid",
+        "sender_account": "vira-preview",
+        "subject": "Paid TikTok Shop short-form video opportunity",
+        "body": "Hi!\n\nYour home decor, lifestyle, and food-focused UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
+        "personalization": "traits:deterministic",
+        "content_template_id": "spain-tiktok-shop-eur20",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
+        "outreach_intent": "fixed_offer",
+        "followup_mode": "disabled",
+        "personalization_evidence": [
+          "bio"
+        ],
+        "personalization_traits": [
+          "home_decor",
+          "lifestyle",
+          "food",
           "ugc_creator",
           "city:barcelona"
         ],
@@ -426,73 +694,94 @@
         ],
         "creator_profile": {
           "country": "ES",
-          "profile_url": "https://www.tiktok.com/@paulaasanchezugc",
-          "followers": 2196,
-          "avg_views_10": 47423,
-          "engagement_rate": 0.1074,
-          "shop_signals": 1,
+          "profile_url": "https://www.tiktok.com/@arantxadomi",
+          "followers": 5427,
+          "avg_views_10": 333738,
+          "engagement_rate": 0.063,
+          "shop_signals": 0,
           "email_source": "bio",
           "email_verified": true,
-          "bio": "UGC | Barcelona 💌paulasanchezsanchezugc@gmail.com"
+          "bio": "☕️ lifestyle | deco | recetas 🤳🏻 UGC creator & Freelance Social Media 💌 arantxadomiugc@gmail.com 📍Barcelona | Costa Brava"
         }
-      },
+      }
+    ],
+    "preview_only": true,
+    "side_effects": {
+      "smtp_sends": 0,
+      "tiktok_dm_sends": 0,
+      "feishu_writes": 0
+    },
+    "source_file": "scaffolds/tikhub-kol-analyzer/output/eu5_10_tikhub_20260717/final.csv",
+    "source_rows": 10,
+    "country_filter": "ES",
+    "country_rows": 10,
+    "content_template_id": "spain-tiktok-shop-eur20",
+    "content_template_version": "2026-07-18.1",
+    "outreach_intent": "fixed_offer",
+    "followup_mode": "disabled",
+    "data_limitations": [
+      "candidate_id falls back to platform:handle because the analyzer CSV has no stable TikTok user ID",
+      "email_verified indicates domain/MX validation, not mailbox ownership or SMTP deliverability",
+      "recent-video evidence and TikTok Shop product-link capability are not verified in this CSV"
+    ]
+  },
+  "manifest": {
+    "schema_version": "first-outreach-batch.v1",
+    "batch_id": "03b9a265-9632-45c4-83a8-766c1213a42c",
+    "campaign_id": "spain-tiktok-shop-eur20-test",
+    "template_id": "step01",
+    "template_version": "step01-first-contact-workflow-v2",
+    "content_template_id": "spain-tiktok-shop-eur20",
+    "content_template_version": "2026-07-18.1",
+    "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
+    "outreach_intent": "fixed_offer",
+    "followup_mode": "disabled",
+    "created_at": "2026-07-19T08:17:23.383Z",
+    "approval": {
+      "status": "pending",
+      "approved_by": "",
+      "approved_at": "",
+      "payload_sha256": ""
+    },
+    "items": [
       {
-        "handle": "niazuluagaa",
-        "status": "planned",
-        "reason": "dry_run",
-        "candidate_id": "tiktok:niazuluagaa",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:niazuluagaa:step01",
+        "candidate_id": "tiktok:stephaniaugc_",
+        "handle": "stephaniaugc_",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:stephaniaugc_:step01",
         "channel": "email",
-        "to": "infoniazuluaga@gmail.com",
-        "from": "preview-only@local.invalid",
+        "to": "stephaniaugc@gmail.com",
         "sender_account": "vira-preview",
+        "from": "preview-only@local.invalid",
         "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour emphasis on versatile content for brands stood out as especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
-        "personalization": "traits:deterministic",
+        "body": "Hi!\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
+        "personalization": "template",
         "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
         "outreach_intent": "fixed_offer",
         "followup_mode": "disabled",
-        "personalization_evidence": [
-          "bio"
-        ],
-        "personalization_traits": [
-          "versatile_brand_content"
-        ],
+        "personalization_evidence": [],
+        "personalization_traits": [],
         "review_warnings": [
           "tiktok_shop_product_link_capability_unverified",
           "stable_candidate_identity_not_proven_by_snapshot",
           "email_domain_verified_not_mailbox_confirmed"
-        ],
-        "creator_profile": {
-          "country": "ES",
-          "profile_url": "https://www.tiktok.com/@niazuluagaa",
-          "followers": 2230,
-          "avg_views_10": 46338,
-          "engagement_rate": 0.117,
-          "shop_signals": 1,
-          "email_source": "bio",
-          "email_verified": true,
-          "bio": "La versatilidad que tú marca necesita ✨ 📩 infoniazuluaga@gmail.com  📍España"
-        }
+        ]
       },
       {
-        "handle": "leireugc",
-        "status": "planned",
-        "reason": "dry_run",
         "candidate_id": "tiktok:leireugc",
+        "handle": "leireugc",
         "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:leireugc:step01",
         "channel": "email",
         "to": "ugcleirevalles@gmail.com",
-        "from": "preview-only@local.invalid",
         "sender_account": "vira-preview",
+        "from": "preview-only@local.invalid",
         "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour creator-education approach to UGC stood out as especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
+        "body": "Hi!\n\nYour creator-education approach to UGC stood out as especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
         "personalization": "traits:deterministic",
         "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
         "outreach_intent": "fixed_offer",
         "followup_mode": "disabled",
         "personalization_evidence": [
@@ -507,274 +796,32 @@
           "tiktok_shop_product_link_capability_unverified",
           "stable_candidate_identity_not_proven_by_snapshot",
           "email_domain_verified_not_mailbox_confirmed"
-        ],
-        "creator_profile": {
-          "country": "ES",
-          "profile_url": "https://www.tiktok.com/@leireugc",
-          "followers": 8598,
-          "avg_views_10": 21061,
-          "engagement_rate": 0.0764,
-          "shop_signals": 1,
-          "email_source": "bio",
-          "email_verified": true,
-          "bio": "Conviértete en ✨creadora UGC✨ 📩 ugcleirevalles@gmail.com"
-        }
+        ]
       },
       {
-        "handle": "cathesaavedra",
-        "status": "planned",
-        "reason": "dry_run",
-        "candidate_id": "tiktok:cathesaavedra",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:cathesaavedra:step01",
+        "candidate_id": "tiktok:hannaxini",
+        "handle": "hannaxini",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:hannaxini:step01",
         "channel": "email",
-        "to": "cathesaavedraugc@gmail.com",
-        "from": "preview-only@local.invalid",
+        "to": "hannaxini@gmail.com",
         "sender_account": "vira-preview",
+        "from": "preview-only@local.invalid",
         "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour focus on honest skincare and real-skin UGC stood out as especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
-        "personalization": "traits:deterministic",
+        "body": "Hi!\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
+        "personalization": "template",
         "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
         "outreach_intent": "fixed_offer",
         "followup_mode": "disabled",
-        "personalization_evidence": [
-          "bio"
-        ],
-        "personalization_traits": [
-          "skincare",
-          "ugc_creator",
-          "product_reviews",
-          "honest_skin",
-          "shop_bio_signal"
-        ],
+        "personalization_evidence": [],
+        "personalization_traits": [],
         "review_warnings": [
           "tiktok_shop_product_link_capability_unverified",
           "stable_candidate_identity_not_proven_by_snapshot",
           "email_domain_verified_not_mailbox_confirmed"
-        ],
-        "creator_profile": {
-          "country": "ES",
-          "profile_url": "https://www.tiktok.com/@cathesaavedra",
-          "followers": 1791,
-          "avg_views_10": 13668,
-          "engagement_rate": 0.0501,
-          "shop_signals": 1,
-          "email_source": "bio",
-          "email_verified": true,
-          "bio": "💻UGC Creator | Opiniones y Piel Real Ig: @cathesaavedra_ 💌cathesaavedraugc@gmail.com 👇🏽Todos los productos en mi escaparate👇🏽"
-        }
+        ]
       },
-      {
-        "handle": "nerea_ugc_",
-        "status": "planned",
-        "reason": "dry_run",
-        "candidate_id": "tiktok:nerea_ugc_",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:nerea_ugc_:step01",
-        "channel": "email",
-        "to": "ugcnereavalles@gmail.com",
-        "from": "preview-only@local.invalid",
-        "sender_account": "vira-preview",
-        "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour focus on bringing brands to life through content stood out as especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
-        "personalization": "traits:deterministic",
-        "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
-        "outreach_intent": "fixed_offer",
-        "followup_mode": "disabled",
-        "personalization_evidence": [
-          "bio"
-        ],
-        "personalization_traits": [
-          "ugc_creator",
-          "brand_storytelling",
-          "ugc_from_handle"
-        ],
-        "review_warnings": [
-          "tiktok_shop_product_link_capability_unverified",
-          "stable_candidate_identity_not_proven_by_snapshot",
-          "email_domain_verified_not_mailbox_confirmed"
-        ],
-        "creator_profile": {
-          "country": "ES",
-          "profile_url": "https://www.tiktok.com/@nerea_ugc_",
-          "followers": 1897,
-          "avg_views_10": 13126,
-          "engagement_rate": 0.0823,
-          "shop_signals": 1,
-          "email_source": "bio",
-          "email_verified": true,
-          "bio": "Dando vida a las marcas 🤎 📩/ugcnereavalles@gmail.com 👇PORTFOLIO👇"
-        }
-      },
-      {
-        "handle": "loga.mode",
-        "status": "planned",
-        "reason": "dry_run",
-        "candidate_id": "tiktok:loga.mode",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:loga.mode:step01",
-        "channel": "email",
-        "to": "ainhoalongares.contacto@gmail.com",
-        "from": "preview-only@local.invalid",
-        "sender_account": "vira-preview",
-        "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour product-testing and review-focused content stood out as a strong fit for this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
-        "personalization": "traits:deterministic",
-        "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
-        "outreach_intent": "fixed_offer",
-        "followup_mode": "disabled",
-        "personalization_evidence": [
-          "bio"
-        ],
-        "personalization_traits": [
-          "product_reviews"
-        ],
-        "review_warnings": [
-          "tiktok_shop_product_link_capability_unverified",
-          "stable_candidate_identity_not_proven_by_snapshot",
-          "email_domain_verified_not_mailbox_confirmed"
-        ],
-        "creator_profile": {
-          "country": "ES",
-          "profile_url": "https://www.tiktok.com/@loga.mode",
-          "followers": 871,
-          "avg_views_10": 12733,
-          "engagement_rate": 0.0581,
-          "shop_signals": 1,
-          "email_source": "bio",
-          "email_verified": true,
-          "bio": "🧚🏻🌼🦜🌸🌞 📸 Lo pruebo, lo vivo, lo comparto ✉️ ainhoalongares.contacto@gmail.com ⭐️ Más contenido en ig: loga.mode @ainhoa.longares"
-        }
-      },
-      {
-        "handle": "lalaurisita",
-        "status": "planned",
-        "reason": "dry_run",
-        "candidate_id": "tiktok:lalaurisita",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:lalaurisita:step01",
-        "channel": "email",
-        "to": "lauriugc.collabs@gmail.com",
-        "from": "preview-only@local.invalid",
-        "sender_account": "vira-preview",
-        "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour skincare, beauty, and travel-focused UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
-        "personalization": "traits:deterministic",
-        "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
-        "outreach_intent": "fixed_offer",
-        "followup_mode": "disabled",
-        "personalization_evidence": [
-          "bio"
-        ],
-        "personalization_traits": [
-          "skincare",
-          "beauty",
-          "travel",
-          "ugc_creator"
-        ],
-        "review_warnings": [
-          "tiktok_shop_product_link_capability_unverified",
-          "stable_candidate_identity_not_proven_by_snapshot",
-          "email_domain_verified_not_mailbox_confirmed"
-        ],
-        "creator_profile": {
-          "country": "ES",
-          "profile_url": "https://www.tiktok.com/@lalaurisita",
-          "followers": 1683,
-          "avg_views_10": 12214,
-          "engagement_rate": 0.1528,
-          "shop_signals": 1,
-          "email_source": "bio",
-          "email_verified": true,
-          "bio": "📍 BCN ✨ Skincare | Beauty | Travel  💌 UGC Creator 📩 lauriugc.collabs@gmail.com IG: @lauurisitaa"
-        }
-      },
-      {
-        "handle": "manuuu.ugc",
-        "status": "planned",
-        "reason": "dry_run",
-        "candidate_id": "tiktok:manuuu.ugc",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:manuuu.ugc:step01",
-        "channel": "email",
-        "to": "m44548908@gmail.com",
-        "from": "preview-only@local.invalid",
-        "sender_account": "vira-preview",
-        "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour experience managing UGC creators stood out as especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
-        "personalization": "traits:deterministic",
-        "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
-        "outreach_intent": "fixed_offer",
-        "followup_mode": "disabled",
-        "personalization_evidence": [
-          "bio"
-        ],
-        "personalization_traits": [
-          "ugc_creator",
-          "ugc_manager"
-        ],
-        "review_warnings": [
-          "tiktok_shop_product_link_capability_unverified",
-          "stable_candidate_identity_not_proven_by_snapshot",
-          "email_domain_verified_not_mailbox_confirmed"
-        ],
-        "creator_profile": {
-          "country": "ES",
-          "profile_url": "https://www.tiktok.com/@manuuu.ugc",
-          "followers": 1068,
-          "avg_views_10": 11205,
-          "engagement_rate": 0.0954,
-          "shop_signals": 1,
-          "email_source": "bio",
-          "email_verified": true,
-          "bio": "UGC Manager España PA: @ughh.manuu🌙 y @estudiaconmanu  ig: @manuuu.ugc  📩 m44548908@gmail.com"
-        }
-      }
-    ],
-    "preview_only": true,
-    "side_effects": {
-      "smtp_sends": 0,
-      "tiktok_dm_sends": 0,
-      "feishu_writes": 0
-    },
-    "source_file": "scaffolds/tikhub-kol-analyzer/output/tts_l1_eu/final.csv",
-    "source_rows": 10,
-    "country_filter": "ES",
-    "country_rows": 10,
-    "content_template_id": "spain-tiktok-shop-eur20",
-    "content_template_version": "2026-07-17.2",
-    "outreach_intent": "fixed_offer",
-    "followup_mode": "disabled",
-    "data_limitations": [
-      "candidate_id falls back to platform:handle because the analyzer CSV has no stable TikTok user ID",
-      "email_verified indicates domain/MX validation, not mailbox ownership or SMTP deliverability",
-      "recent-video evidence and TikTok Shop product-link capability are not verified in this CSV"
-    ]
-  },
-  "manifest": {
-    "schema_version": "first-outreach-batch.v1",
-    "batch_id": "943a6ea0-43c4-4a08-8e55-52232f93feaf",
-    "campaign_id": "spain-tiktok-shop-eur20-test",
-    "template_id": "step01",
-    "template_version": "step01-first-contact-workflow-v2",
-    "content_template_id": "spain-tiktok-shop-eur20",
-    "content_template_version": "2026-07-17.2",
-    "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
-    "outreach_intent": "fixed_offer",
-    "followup_mode": "disabled",
-    "created_at": "2026-07-17T12:10:40.707Z",
-    "approval": {
-      "status": "pending",
-      "approved_by": "",
-      "approved_at": "",
-      "payload_sha256": ""
-    },
-    "items": [
       {
         "candidate_id": "tiktok:soyraka_",
         "handle": "soyraka_",
@@ -784,11 +831,11 @@
         "sender_account": "vira-preview",
         "from": "preview-only@local.invalid",
         "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour home decor, fashion, and beauty-focused UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
+        "body": "Hi!\n\nYour home decor, fashion, and beauty-focused UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
         "personalization": "traits:deterministic",
         "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
         "outreach_intent": "fixed_offer",
         "followup_mode": "disabled",
         "personalization_evidence": [
@@ -807,26 +854,26 @@
         ]
       },
       {
-        "candidate_id": "tiktok:vickyyvalero",
-        "handle": "vickyyvalero",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:vickyyvalero:step01",
+        "candidate_id": "tiktok:cynthiaducos_",
+        "handle": "cynthiaducos_",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:cynthiaducos_:step01",
         "channel": "email",
-        "to": "victoriaavs99@gmail.com",
+        "to": "ugc.cynthiaducos@gmail.com",
         "sender_account": "vira-preview",
         "from": "preview-only@local.invalid",
         "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour beauty-focused UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
+        "body": "Hi!\n\nYour lifestyle-focused UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
         "personalization": "traits:deterministic",
         "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
         "outreach_intent": "fixed_offer",
         "followup_mode": "disabled",
         "personalization_evidence": [
           "bio"
         ],
         "personalization_traits": [
-          "beauty",
+          "lifestyle",
           "ugc_creator"
         ],
         "review_warnings": [
@@ -836,26 +883,137 @@
         ]
       },
       {
-        "candidate_id": "tiktok:paulaasanchezugc",
-        "handle": "paulaasanchezugc",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:paulaasanchezugc:step01",
+        "candidate_id": "tiktok:povcamilam",
+        "handle": "povcamilam",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:povcamilam:step01",
         "channel": "email",
-        "to": "paulasanchezsanchezugc@gmail.com",
+        "to": "inyeluanmanager@gmail.com",
         "sender_account": "vira-preview",
         "from": "preview-only@local.invalid",
         "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour Barcelona-based UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
+        "body": "Hi!\n\nYour experience creating UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
         "personalization": "traits:deterministic",
         "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
         "outreach_intent": "fixed_offer",
         "followup_mode": "disabled",
         "personalization_evidence": [
-          "bio",
-          "handle"
+          "bio"
         ],
         "personalization_traits": [
+          "ugc_creator"
+        ],
+        "review_warnings": [
+          "tiktok_shop_product_link_capability_unverified",
+          "stable_candidate_identity_not_proven_by_snapshot",
+          "email_domain_verified_not_mailbox_confirmed"
+        ]
+      },
+      {
+        "candidate_id": "tiktok:aariiadnna",
+        "handle": "aariiadnna",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:aariiadnna:step01",
+        "channel": "email",
+        "to": "infoariadnagaya@gmail.com",
+        "sender_account": "vira-preview",
+        "from": "preview-only@local.invalid",
+        "subject": "Paid TikTok Shop short-form video opportunity",
+        "body": "Hi!\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
+        "personalization": "template",
+        "content_template_id": "spain-tiktok-shop-eur20",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
+        "outreach_intent": "fixed_offer",
+        "followup_mode": "disabled",
+        "personalization_evidence": [],
+        "personalization_traits": [],
+        "review_warnings": [
+          "tiktok_shop_product_link_capability_unverified",
+          "stable_candidate_identity_not_proven_by_snapshot",
+          "email_domain_verified_not_mailbox_confirmed"
+        ]
+      },
+      {
+        "candidate_id": "tiktok:itsmarianarr",
+        "handle": "itsmarianarr",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:itsmarianarr:step01",
+        "channel": "email",
+        "to": "marianar.ugc@gmail.com",
+        "sender_account": "vira-preview",
+        "from": "preview-only@local.invalid",
+        "subject": "Paid TikTok Shop short-form video opportunity",
+        "body": "Hi!\n\nYour experience creating UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
+        "personalization": "traits:deterministic",
+        "content_template_id": "spain-tiktok-shop-eur20",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
+        "outreach_intent": "fixed_offer",
+        "followup_mode": "disabled",
+        "personalization_evidence": [
+          "bio"
+        ],
+        "personalization_traits": [
+          "ugc_creator"
+        ],
+        "review_warnings": [
+          "tiktok_shop_product_link_capability_unverified",
+          "stable_candidate_identity_not_proven_by_snapshot",
+          "email_domain_verified_not_mailbox_confirmed"
+        ]
+      },
+      {
+        "candidate_id": "tiktok:icris.es",
+        "handle": "icris.es",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:icris.es:step01",
+        "channel": "email",
+        "to": "inquires.cristina@gmail.com",
+        "sender_account": "vira-preview",
+        "from": "preview-only@local.invalid",
+        "subject": "Paid TikTok Shop short-form video opportunity",
+        "body": "Hi!\n\nYour content around beauty and fitness looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
+        "personalization": "traits:deterministic",
+        "content_template_id": "spain-tiktok-shop-eur20",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
+        "outreach_intent": "fixed_offer",
+        "followup_mode": "disabled",
+        "personalization_evidence": [
+          "bio"
+        ],
+        "personalization_traits": [
+          "beauty",
+          "fitness"
+        ],
+        "review_warnings": [
+          "tiktok_shop_product_link_capability_unverified",
+          "stable_candidate_identity_not_proven_by_snapshot",
+          "email_domain_verified_not_mailbox_confirmed"
+        ]
+      },
+      {
+        "candidate_id": "tiktok:arantxadomi",
+        "handle": "arantxadomi",
+        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:arantxadomi:step01",
+        "channel": "email",
+        "to": "arantxadomiugc@gmail.com",
+        "sender_account": "vira-preview",
+        "from": "preview-only@local.invalid",
+        "subject": "Paid TikTok Shop short-form video opportunity",
+        "body": "Hi!\n\nYour home decor, lifestyle, and food-focused UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?\n\nVira",
+        "personalization": "traits:deterministic",
+        "content_template_id": "spain-tiktok-shop-eur20",
+        "content_template_version": "2026-07-18.1",
+        "content_template_sha256": "7fc08f07c3e6e3fbc3f0025da71a03966a773028d82fb42bc0793576cd061e0e",
+        "outreach_intent": "fixed_offer",
+        "followup_mode": "disabled",
+        "personalization_evidence": [
+          "bio"
+        ],
+        "personalization_traits": [
+          "home_decor",
+          "lifestyle",
+          "food",
           "ugc_creator",
           "city:barcelona"
         ],
@@ -864,217 +1022,9 @@
           "stable_candidate_identity_not_proven_by_snapshot",
           "email_domain_verified_not_mailbox_confirmed"
         ]
-      },
-      {
-        "candidate_id": "tiktok:niazuluagaa",
-        "handle": "niazuluagaa",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:niazuluagaa:step01",
-        "channel": "email",
-        "to": "infoniazuluaga@gmail.com",
-        "sender_account": "vira-preview",
-        "from": "preview-only@local.invalid",
-        "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour emphasis on versatile content for brands stood out as especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
-        "personalization": "traits:deterministic",
-        "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
-        "outreach_intent": "fixed_offer",
-        "followup_mode": "disabled",
-        "personalization_evidence": [
-          "bio"
-        ],
-        "personalization_traits": [
-          "versatile_brand_content"
-        ],
-        "review_warnings": [
-          "tiktok_shop_product_link_capability_unverified",
-          "stable_candidate_identity_not_proven_by_snapshot",
-          "email_domain_verified_not_mailbox_confirmed"
-        ]
-      },
-      {
-        "candidate_id": "tiktok:leireugc",
-        "handle": "leireugc",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:leireugc:step01",
-        "channel": "email",
-        "to": "ugcleirevalles@gmail.com",
-        "sender_account": "vira-preview",
-        "from": "preview-only@local.invalid",
-        "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour creator-education approach to UGC stood out as especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
-        "personalization": "traits:deterministic",
-        "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
-        "outreach_intent": "fixed_offer",
-        "followup_mode": "disabled",
-        "personalization_evidence": [
-          "bio",
-          "handle"
-        ],
-        "personalization_traits": [
-          "ugc_creator",
-          "creator_education"
-        ],
-        "review_warnings": [
-          "tiktok_shop_product_link_capability_unverified",
-          "stable_candidate_identity_not_proven_by_snapshot",
-          "email_domain_verified_not_mailbox_confirmed"
-        ]
-      },
-      {
-        "candidate_id": "tiktok:cathesaavedra",
-        "handle": "cathesaavedra",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:cathesaavedra:step01",
-        "channel": "email",
-        "to": "cathesaavedraugc@gmail.com",
-        "sender_account": "vira-preview",
-        "from": "preview-only@local.invalid",
-        "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour focus on honest skincare and real-skin UGC stood out as especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
-        "personalization": "traits:deterministic",
-        "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
-        "outreach_intent": "fixed_offer",
-        "followup_mode": "disabled",
-        "personalization_evidence": [
-          "bio"
-        ],
-        "personalization_traits": [
-          "skincare",
-          "ugc_creator",
-          "product_reviews",
-          "honest_skin",
-          "shop_bio_signal"
-        ],
-        "review_warnings": [
-          "tiktok_shop_product_link_capability_unverified",
-          "stable_candidate_identity_not_proven_by_snapshot",
-          "email_domain_verified_not_mailbox_confirmed"
-        ]
-      },
-      {
-        "candidate_id": "tiktok:nerea_ugc_",
-        "handle": "nerea_ugc_",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:nerea_ugc_:step01",
-        "channel": "email",
-        "to": "ugcnereavalles@gmail.com",
-        "sender_account": "vira-preview",
-        "from": "preview-only@local.invalid",
-        "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour focus on bringing brands to life through content stood out as especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
-        "personalization": "traits:deterministic",
-        "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
-        "outreach_intent": "fixed_offer",
-        "followup_mode": "disabled",
-        "personalization_evidence": [
-          "bio"
-        ],
-        "personalization_traits": [
-          "ugc_creator",
-          "brand_storytelling",
-          "ugc_from_handle"
-        ],
-        "review_warnings": [
-          "tiktok_shop_product_link_capability_unverified",
-          "stable_candidate_identity_not_proven_by_snapshot",
-          "email_domain_verified_not_mailbox_confirmed"
-        ]
-      },
-      {
-        "candidate_id": "tiktok:loga.mode",
-        "handle": "loga.mode",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:loga.mode:step01",
-        "channel": "email",
-        "to": "ainhoalongares.contacto@gmail.com",
-        "sender_account": "vira-preview",
-        "from": "preview-only@local.invalid",
-        "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour product-testing and review-focused content stood out as a strong fit for this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
-        "personalization": "traits:deterministic",
-        "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
-        "outreach_intent": "fixed_offer",
-        "followup_mode": "disabled",
-        "personalization_evidence": [
-          "bio"
-        ],
-        "personalization_traits": [
-          "product_reviews"
-        ],
-        "review_warnings": [
-          "tiktok_shop_product_link_capability_unverified",
-          "stable_candidate_identity_not_proven_by_snapshot",
-          "email_domain_verified_not_mailbox_confirmed"
-        ]
-      },
-      {
-        "candidate_id": "tiktok:lalaurisita",
-        "handle": "lalaurisita",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:lalaurisita:step01",
-        "channel": "email",
-        "to": "lauriugc.collabs@gmail.com",
-        "sender_account": "vira-preview",
-        "from": "preview-only@local.invalid",
-        "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour skincare, beauty, and travel-focused UGC content looks especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
-        "personalization": "traits:deterministic",
-        "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
-        "outreach_intent": "fixed_offer",
-        "followup_mode": "disabled",
-        "personalization_evidence": [
-          "bio"
-        ],
-        "personalization_traits": [
-          "skincare",
-          "beauty",
-          "travel",
-          "ugc_creator"
-        ],
-        "review_warnings": [
-          "tiktok_shop_product_link_capability_unverified",
-          "stable_candidate_identity_not_proven_by_snapshot",
-          "email_domain_verified_not_mailbox_confirmed"
-        ]
-      },
-      {
-        "candidate_id": "tiktok:manuuu.ugc",
-        "handle": "manuuu.ugc",
-        "idempotency_key": "spain-tiktok-shop-eur20-test:tiktok:manuuu.ugc:step01",
-        "channel": "email",
-        "to": "m44548908@gmail.com",
-        "sender_account": "vira-preview",
-        "from": "preview-only@local.invalid",
-        "subject": "Paid TikTok Shop short-form video opportunity",
-        "body": "Hi!\n\nYour experience managing UGC creators stood out as especially relevant to this opportunity.\n\nWe have a paid TikTok Shop short-form video posting opportunity.\n\nWe will provide the video for you, and you only need to post it on your TikTok account and add the TikTok Shop product link. You will receive €20 for the post.\n\nWould you be interested in collaborating with us?\n\nVira",
-        "personalization": "traits:deterministic",
-        "content_template_id": "spain-tiktok-shop-eur20",
-        "content_template_version": "2026-07-17.2",
-        "content_template_sha256": "b5863a8be363d40c94319630c1590820bcf08d11959bf8c0a3ab5cfe0df1508b",
-        "outreach_intent": "fixed_offer",
-        "followup_mode": "disabled",
-        "personalization_evidence": [
-          "bio"
-        ],
-        "personalization_traits": [
-          "ugc_creator",
-          "ugc_manager"
-        ],
-        "review_warnings": [
-          "tiktok_shop_product_link_capability_unverified",
-          "stable_candidate_identity_not_proven_by_snapshot",
-          "email_domain_verified_not_mailbox_confirmed"
-        ]
       }
     ],
-    "preview_payload_sha256": "beb89bf2ff1a14b4c9e832366db5a91dc34988c6705253b4c4fe321e3d410bf0"
+    "preview_payload_sha256": "4c69214c6bf2101494ca2df2a5ae6688d96b8ed2381e772c48d89f06d185de65"
   },
   "replies": []
 }

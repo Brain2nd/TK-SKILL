@@ -24,6 +24,7 @@ test("Spain seed remains ten personalized English EUR20 previews with zero sends
   for (const item of data.manifest.items) {
     assert.equal(item.subject, "Paid TikTok Shop short-form video opportunity");
     assert.match(item.body, /You will receive €20 for the post\./);
+    assert.match(item.body, /https:\/\/vm\.tiktok\.com\/ZNRoT8PuT\//);
     assert.match(item.body, /\n\nVira$/);
     assert.equal(item.followup_mode, "disabled");
   }

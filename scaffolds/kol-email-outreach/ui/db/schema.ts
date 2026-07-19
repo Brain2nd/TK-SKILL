@@ -54,6 +54,8 @@ export const senderAccounts = sqliteTable("sender_accounts", {
   smtpHost: text("smtp_host").notNull(),
   smtpPort: integer("smtp_port").notNull(),
   secure: integer("secure", { mode: "boolean" }).notNull().default(true),
+  provider: text("provider").notNull().default("custom"),
+  authMode: text("auth_mode").notNull().default("smtp"),
   dailyCap: integer("daily_cap").notNull().default(50),
   verificationStatus: text("verification_status").notNull().default("configured"),
   isEnabled: integer("is_enabled", { mode: "boolean" }).notNull().default(true),

@@ -18,7 +18,10 @@ const root = dirname(fileURLToPath(import.meta.url));
 
 function parseArgs(argv) {
   const args = {
-    candidates: resolve(root, "../tikhub-kol-analyzer/output/tts_l1_eu/final.csv"),
+    candidates: resolve(
+      process.env.KOL_CANDIDATES_FILE ||
+      resolve(root, "../tikhub-kol-analyzer/output/eu5_10_tikhub_20260717/final.csv"),
+    ),
     country: "ES",
     template: resolve(root, "outreach_templates/spain-tiktok-shop-eur20.json"),
     campaignId: "spain-tiktok-shop-eur20-test",

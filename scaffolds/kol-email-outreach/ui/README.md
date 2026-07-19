@@ -55,12 +55,14 @@ TikHub Analyzer CSV
        ├─ D1：项目、达人分配、审批批次、审计事件
        └─ 127.0.0.1:8878 本地网关
             ├─ AI Key（只写、仅内存）
-            ├─ SMTP 应用密码（只写、仅内存）
+            ├─ Gmail / Outlook OAuth 令牌（只写、仅内存）
+            ├─ 自定义 SMTP 应用密码（只写、仅内存）
             ├─ AI 个性化结果缓存
             └─ 顺序发送队列、journal、运行锁、熔断器
 ```
 
-浏览器不会逐封调用 SMTP。它只提交一次已审批批次；真正的 AI 和 SMTP 调用均由仅监听本机的网关执行。
+浏览器不会逐封调用邮件服务商。它只提交一次已审批批次；真正的 AI、Gmail API、
+Microsoft Graph 或 SMTP 调用均由仅监听本机的网关执行。
 
 ## 本地运行
 
@@ -83,7 +85,7 @@ npm ci
 cd scaffolds/kol-email-outreach/ui
 npm run dev -- --hostname 127.0.0.1 --port 8877
 
-# 终端 2：AI 与 SMTP 本地网关
+# 终端 2：AI 与邮件发送本地网关
 cd scaffolds/kol-email-outreach/ui
 npm run gateway
 ```
@@ -91,6 +93,24 @@ npm run gateway
 打开 <http://127.0.0.1:8877/>。
 
 本地网关固定监听 `127.0.0.1:8878`，不要将其直接暴露到公网。
+
+如需“只填邮箱后授权”的 Gmail / Outlook 连接，启动网关前配置对应的 OAuth 应用：
+
+```powershell
+# Gmail（二选一时只需要配置对应服务商）
+$env:LOOP_GOOGLE_OAUTH_CLIENT_ID="...apps.googleusercontent.com"
+$env:LOOP_GOOGLE_OAUTH_CLIENT_SECRET="..." # Web OAuth 客户端需要；桌面客户端可按 Google 配置决定
+
+# Outlook / Microsoft 365
+$env:LOOP_MICROSOFT_OAUTH_CLIENT_ID="..."
+$env:LOOP_MICROSOFT_OAUTH_TENANT="common"
+$env:LOOP_MICROSOFT_OAUTH_CLIENT_SECRET="..." # 公共客户端可以不填
+
+# 两个服务商的 OAuth Redirect URI 都登记为：
+$env:LOOP_OAUTH_REDIRECT_URI="http://127.0.0.1:8878/oauth/callback"
+$env:LOOP_UI_ORIGIN="http://127.0.0.1:8877"
+npm run gateway
+```
 
 ## 首次配置
 
@@ -106,15 +126,15 @@ API Key 是只写字段，不写入 D1、配置文件、日志、任务文件或
 
 ### 2. 配置发件邮箱
 
-同一页面支持 Gmail、Outlook/Microsoft 365 和自定义 SMTP。填写：
+同一页面支持 Gmail、Outlook/Microsoft 365 和自定义 SMTP：
 
-- 账户标签、显示名称和 From 邮箱；
-- Reply-To（可选）；
-- SMTP Host、端口和 TLS；
-- 应用密码 / SMTP Password；
-- 每日发送上限。
+- Gmail / Outlook：填写邮箱、显示名称和每日上限，点击“连接并授权”，在服务商官方页面完成一次 OAuth 授权；
+- 自定义 SMTP：另填 SMTP Host、端口、TLS 和应用密码；
+- Reply-To 对两种方式都可选。
 
-保存后必须点击“测试连接”。SMTP 密码同样只存在当前网关进程内存中，网关重启后需要重新输入并重新验证。
+连接后必须通过“测试连接”。OAuth Token 和 SMTP 密码都只存在当前网关进程内存中；
+网关重启后需要重新授权或重新输入密码。OAuth 回调使用一次性 `state` 和 PKCE，授权账号
+必须与填写的发件邮箱完全一致。
 
 ### 3. 配置项目
 
@@ -151,9 +171,9 @@ API Key 是只写字段，不写入 D1、配置文件、日志、任务文件或
 
 ## 数据与隐私
 
-- 示例达人数据来自 `scaffolds/tikhub-kol-analyzer/output/tts_l1_eu/final.csv`。
+- 示例达人数据来自 `scaffolds/tikhub-kol-analyzer/output/eu5_10_tikhub_20260717/final.csv`；真实项目可通过 `KOL_CANDIDATES_FILE` 接收画像 MCP 返回的 `final_file`。
 - AI 只接收生成 Hook 所需的公开字段，不接收达人邮箱、付款信息或内部评价。
-- SMTP 密码和 AI Key 都是只写、仅内存凭据。
+- OAuth Token、SMTP 密码和 AI Key 都是只写、仅内存凭据。
 - `config.json`、`.env*`、D1 本地文件、发送任务、journal、锁和构建产物均被忽略。
 - 不要把真实付款信息、合同、地址或私聊记录放入公开仓库。
 
