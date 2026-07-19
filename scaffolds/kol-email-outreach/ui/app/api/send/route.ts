@@ -103,11 +103,15 @@ export async function POST(request: Request) {
     if (payload.action === "create_batch") {
       const projectId = String(payload.project_id || "");
       const personalizationRequest = await personalizationRequestForProject(owner, projectId);
-      const result = await gateway("/personalize-batch", {
-        method: "POST",
-        body: JSON.stringify({ owner_key: tenantKey, ...personalizationRequest }),
-      }, 240000);
-      const batchId = await createPendingBatch(owner, projectId, result.personalization);
+      let personalization;
+      if (personalizationRequest.personalization_mode === "ai") {
+        const result = await gateway("/personalize-batch", {
+          method: "POST",
+          body: JSON.stringify({ owner_key: tenantKey, ...personalizationRequest }),
+        }, 240000);
+        personalization = result.personalization;
+      }
+      const batchId = await createPendingBatch(owner, projectId, personalization);
       return Response.json({ ok: true, project_id: projectId, batch_id: batchId, ...(await workspaceSnapshot(owner, projectId)) });
     }
     if (payload.action === "start_oauth_sender") {

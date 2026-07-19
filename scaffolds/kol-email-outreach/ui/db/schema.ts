@@ -12,6 +12,7 @@ export const projects = sqliteTable("projects", {
   offerCurrency: text("offer_currency").notNull().default("EUR"),
   targetCount: integer("target_count").notNull().default(0),
   defaultSenderId: text("default_sender_id").notNull().default(""),
+  personalizationMode: text("personalization_mode").notNull().default("template"),
   subjectTemplate: text("subject_template").notNull(),
   bodyTemplate: text("body_template").notNull(),
   status: text("status").notNull().default("draft"),

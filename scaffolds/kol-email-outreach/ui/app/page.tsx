@@ -111,6 +111,7 @@ function CreateProjectModal({ workspace, close, submit, busy }: any) {
   const [currency, setCurrency] = useState("EUR");
   const [count, setCount] = useState(Math.min(10, workspace.creators.length));
   const [senderId, setSenderId] = useState(workspace.senders.find((sender: any) => sender.verification_status === "verified")?.id || "");
+  const [personalizationMode, setPersonalizationMode] = useState("template");
   const [subject, setSubject] = useState(DEFAULT_SUBJECT);
   const [body, setBody] = useState(DEFAULT_BODY);
   const [selected, setSelected] = useState<string[]>(workspace.creators.slice(0, count).map((creator: any) => creator.id));
@@ -132,7 +133,7 @@ function CreateProjectModal({ workspace, close, submit, busy }: any) {
         submit({
           action: "create_project", name, brand_name: brand, market, offer_amount: offer,
           offer_currency: currency, target_count: count, default_sender_id: senderId,
-          subject_template: subject, body_template: body, creator_ids: selected,
+          personalization_mode: personalizationMode, subject_template: subject, body_template: body, creator_ids: selected,
         });
       }}>
         <div className="wizard-step"><span>01</span><div><h3>项目信息</h3><p>为每个 Campaign 建立独立达人名单和发送状态。</p></div></div>
@@ -143,6 +144,7 @@ function CreateProjectModal({ workspace, close, submit, busy }: any) {
           <label><span>固定报价</span><input type="number" min="0" value={offer} onChange={(e) => setOffer(Number(e.target.value))} /></label>
           <label><span>币种</span><select value={currency} onChange={(e) => setCurrency(e.target.value)}><option>EUR</option><option>USD</option><option>GBP</option></select></label>
           <label><span>默认发件邮箱</span><select value={senderId} onChange={(e) => setSenderId(e.target.value)}><option value="">稍后配置</option>{workspace.senders.map((sender: any) => <option key={sender.id} value={sender.id}>{sender.label} · {sender.from_email}</option>)}</select></label>
+          <label><span>邮件生成方式</span><select value={personalizationMode} onChange={(e) => setPersonalizationMode(e.target.value)}><option value="template">纯模板（不调用 AI）</option><option value="ai">AI 个性化开场</option></select></label>
         </div>
 
         <div className="wizard-step"><span>02</span><div><h3>达人和发送数量</h3><p>明确这个项目给谁发、总共发几封。</p></div><div className="step-action"><input className="count-input" type="number" min="1" max={workspace.creators.length} value={count} onChange={(e) => selectTop(Number(e.target.value))}/><button type="button" className="secondary-button" onClick={() => selectTop()}>按均播选 Top {count}</button></div></div>
@@ -151,11 +153,11 @@ function CreateProjectModal({ workspace, close, submit, busy }: any) {
         </div>
         <div className={`selection-count ${selected.length === count ? "ok" : "bad"}`}>已选 {selected.length} / 目标 {count} 位达人</div>
 
-        <div className="wizard-step"><span>03</span><div><h3>英文邮件模板</h3><p>画像钩子和发件人签名会在生成批次时替换。</p></div></div>
+        <div className="wizard-step"><span>03</span><div><h3>英文邮件模板</h3><p>{personalizationMode === "ai" ? "AI 只生成画像开场，商业条款仍严格使用模板。" : "每位达人使用同一模板，不调用大模型；发件人签名仍会自动替换。"}</p></div></div>
         <div className="form-stack">
           <label><span>主题</span><input required value={subject} onChange={(e) => setSubject(e.target.value)} lang="en" /></label>
           <label><span>正文</span><textarea required rows={12} value={body} onChange={(e) => setBody(e.target.value)} lang="en" /></label>
-          <small>必须保留 <code>{"{{personalized_hook}}"}</code> 和 <code>{"{{sender_name}}"}</code>。商业条款由模板正文控制。</small>
+          <small>{personalizationMode === "ai" ? <>必须保留 <code>{"{{personalized_hook}}"}</code> 和 <code>{"{{sender_name}}"}</code>。</> : <><code>{"{{personalized_hook}}"}</code> 可删除或保留；纯模板发送时该段会被移除。必须保留 <code>{"{{sender_name}}"}</code>。</>}商业条款由模板正文控制。</small>
         </div>
         <footer className="modal-actions"><button type="button" className="secondary-button" onClick={close}>取消</button><button className="primary-button" disabled={busy || selected.length !== count}>{busy ? "正在创建…" : `创建项目并分配 ${selected.length} 位达人`}</button></footer>
       </form>
@@ -214,6 +216,7 @@ function ProjectWorkspace({ workspace, project, busy, postWorkspace, openRecipie
   const [offer, setOffer] = useState(project.offer_amount);
   const [currency, setCurrency] = useState(project.offer_currency);
   const [senderId, setSenderId] = useState(project.default_sender_id);
+  const [personalizationMode, setPersonalizationMode] = useState(project.personalization_mode || "template");
   const [subject, setSubject] = useState(project.subject_template);
   const [body, setBody] = useState(project.body_template);
   const sentLocked = ["queued", "sending", "paused", "failed", "completed", "delivery_unknown"].includes(project.status);
@@ -238,9 +241,11 @@ function ProjectWorkspace({ workspace, project, busy, postWorkspace, openRecipie
             <label><span>报价</span><input disabled={sentLocked} type="number" value={offer} onChange={(e) => setOffer(Number(e.target.value))}/></label>
             <label><span>币种</span><select disabled={sentLocked} value={currency} onChange={(e) => setCurrency(e.target.value)}><option>EUR</option><option>USD</option><option>GBP</option></select></label>
             <label><span>项目默认发件邮箱</span><select disabled={sentLocked} value={senderId} onChange={(e) => setSenderId(e.target.value)}><option value="">未配置</option>{workspace.senders.map((item: any) => <option key={item.id} value={item.id}>{item.label} · {item.from_email} · {item.verification_status === "verified" ? "已验证" : "待验证"}</option>)}</select></label>
+            <label><span>邮件生成方式</span><select disabled={sentLocked} value={personalizationMode} onChange={(e) => setPersonalizationMode(e.target.value)}><option value="template">纯模板（不调用 AI）</option><option value="ai">AI 个性化开场</option></select></label>
           </div>
           {!senderId && <div className="inline-warning">生成审批批次前必须选择一个已验证发件邮箱。</div>}
           {senderId && sender?.verification_status !== "verified" && <div className="inline-warning">{sender?.from_email || "该邮箱"} 尚未验证发件连接，不能进入正式审批。</div>}
+          {personalizationMode === "ai" && workspace.gateway?.ai?.configured !== true && <div className="inline-warning">AI 个性化模式还需要在“邮箱账户”页面配置模型 API Key；切换为纯模板则无需 API。</div>}
           <div className="form-stack template-editor">
             <label><span>英文主题</span><input disabled={sentLocked} value={subject} onChange={(e) => setSubject(e.target.value)} lang="en" /></label>
             <label><span>英文正文</span><textarea disabled={sentLocked} rows={13} value={body} onChange={(e) => setBody(e.target.value)} lang="en" /></label>
@@ -250,7 +255,7 @@ function ProjectWorkspace({ workspace, project, busy, postWorkspace, openRecipie
             <button className="primary-button" disabled={busy || sentLocked} onClick={() => postWorkspace({
               action: "update_project", project_id: project.id, name, brand_name: brand, market,
               offer_amount: offer, offer_currency: currency, target_count: project.recipient_count,
-              default_sender_id: senderId, subject_template: subject, body_template: body,
+              default_sender_id: senderId, personalization_mode: personalizationMode, subject_template: subject, body_template: body,
             })}>保存项目设置</button>
           </div>
         </article>
@@ -260,6 +265,7 @@ function ProjectWorkspace({ workspace, project, busy, postWorkspace, openRecipie
           <div><span>Campaign ID</span><code>{project.campaign_id}</code></div>
           <div><span>默认发件人</span><b>{sender ? `${sender.from_name} · ${sender.from_email}` : "未配置"}</b></div>
           <div><span>邮件数量</span><b>{project.recipient_count} 封</b></div>
+          <div><span>邮件生成</span><b>{personalizationMode === "ai" ? "AI 个性化开场" : "纯模板 · 不调用 AI"}</b></div>
           <div><span>自动 Follow-up</span><b>关闭</b></div>
           <div><span>发送方式</span><b>顺序队列 · 最低 1 秒间隔</b></div>
           <button className="secondary-button full" onClick={openRecipients} disabled={sentLocked}>调整达人名单</button>
@@ -313,16 +319,19 @@ function Approvals({ workspace, project, busy, postWorkspace, postSend, job }: a
   }, [items]);
   if (!project) return <Empty title="请先选择项目" text="回到项目中心选择要审批的 Campaign。" />;
   if (!batch) {
+    const needsAi = project.personalization_mode === "ai";
     const aiReady = workspace.gateway?.ai?.configured === true;
-    const senderReady = workspace.senders.some((sender: any) => sender.verification_status === "verified");
-    const blocker = !aiReady
+    const senderReady = workspace.runtime_senders?.some((sender: any) => sender.verified) === true;
+    const blocker = needsAi && !aiReady
       ? "请先在“邮箱账户”页面配置只写 AI API Key。"
       : !senderReady
         ? "请先添加并验证至少一个发件邮箱，再为项目选择默认邮箱。"
-        : "AI 将只生成每位达人的个性化开场，母模板商业条款不会交给模型改写。";
+        : needsAi
+          ? "AI 将只生成每位达人的个性化开场，母模板商业条款不会交给模型改写。"
+          : "系统会原样套用英文模板并替换发件人签名，全程不调用大模型。";
     return (
-      <><div className="page-heading"><div><p className="eyebrow">APPROVAL & SEND</p><h1>审批与发送</h1><p className="lede">先用达人公开字段生成个性化开场，再把完整邮件冻结成不可变批次逐封审核。</p></div></div>
-      <Empty title="尚未生成审批批次" text={`${blocker} 生成后会冻结每封邮件的 From、To、Subject、Body 和幂等键。`} action={<button className="primary-button" disabled={busy || !aiReady || !senderReady} onClick={() => postSend({ action: "create_batch", project_id: project.id })}>{busy ? "AI 正在逐封生成…" : `AI 生成 ${project.recipient_count} 封审批邮件`}</button>}/></>
+      <><div className="page-heading"><div><p className="eyebrow">APPROVAL & SEND</p><h1>审批与发送</h1><p className="lede">{needsAi ? "先用达人公开字段生成个性化开场，再把完整邮件冻结成不可变批次逐封审核。" : "按项目英文模板生成完整邮件，再冻结成不可变批次逐封审核。"}</p></div><Pill tone={needsAi ? "blue" : "green"}>{needsAi ? "AI 个性化" : "纯模板 · 无 AI"}</Pill></div>
+      <Empty title="尚未生成审批批次" text={`${blocker} 生成后会冻结每封邮件的 From、To、Subject、Body 和幂等键。`} action={<button className="primary-button" disabled={busy || (needsAi && !aiReady) || !senderReady} onClick={() => postSend({ action: "create_batch", project_id: project.id })}>{busy ? (needsAi ? "AI 正在逐封生成…" : "正在生成模板批次…") : (needsAi ? `AI 生成 ${project.recipient_count} 封审批邮件` : `生成 ${project.recipient_count} 封模板审批邮件`)}</button>}/></>
     );
   }
 
@@ -351,7 +360,7 @@ function Approvals({ workspace, project, busy, postWorkspace, postSend, job }: a
 
       <section className="batch-layout">
         <article className="panel mail-preview">
-          <div className="mail-toolbar"><div><span className="mail-dot red"></span><span className="mail-dot yellow"></span><span className="mail-dot green"></span></div><div className="mail-pager"><button aria-label="上一封" disabled={mailIndex === 0} onClick={() => setMailIndex((value) => value - 1)}>‹</button><span>邮件 {mailIndex + 1} / {items.length}</span><button aria-label="下一封" disabled={mailIndex >= items.length - 1} onClick={() => setMailIndex((value) => value + 1)}>›</button></div><Pill tone="blue">画像个性化</Pill></div>
+          <div className="mail-toolbar"><div><span className="mail-dot red"></span><span className="mail-dot yellow"></span><span className="mail-dot green"></span></div><div className="mail-pager"><button aria-label="上一封" disabled={mailIndex === 0} onClick={() => setMailIndex((value) => value - 1)}>‹</button><span>邮件 {mailIndex + 1} / {items.length}</span><button aria-label="下一封" disabled={mailIndex >= items.length - 1} onClick={() => setMailIndex((value) => value + 1)}>›</button></div><Pill tone={project.personalization_mode === "ai" ? "blue" : "green"}>{project.personalization_mode === "ai" ? "画像个性化" : "纯模板"}</Pill></div>
           {item && <><div className="mail-meta"><Avatar name={item.handle}/><div><b>{item.from_name}</b><p>From: {item.from_email}{item.reply_to_email ? ` · Reply-To: ${item.reply_to_email}` : ""}</p></div><div className="mail-to"><small>收件人</small><span>{item.recipient_email}</span></div></div><div className="mail-subject"><small>邮件主题</small><h2 lang="en">{item.subject}</h2></div><div className="mail-body" lang="en">{item.body.split("\n").filter(Boolean).map((paragraph: string, index: number) => <p key={index}>{paragraph}</p>)}</div>{item.review_warnings?.length > 0 && <div className="warning-review"><b>本封需要人工核对</b><ul>{item.review_warnings.map((warning: unknown, index: number) => <li key={index}>{typeof warning === "string" ? warning : JSON.stringify(warning)}</li>)}</ul><button className={reviewedWarningIds.includes(item.id) ? "secondary-button reviewed" : "secondary-button"} onClick={() => setReviewedWarningIds((current) => current.includes(item.id) ? current : [...current, item.id])}>{reviewedWarningIds.includes(item.id) ? "✓ 已核对本封警告" : "标记本封已核对"}</button></div>}<div className="mail-footer"><span>幂等键 {item.idempotency_key}</span><span>{item.review_warnings?.length || 0} 项人工审核</span></div></>}
         </article>
 
@@ -461,8 +470,8 @@ function SenderAccounts({ workspace, busy, postSend }: any) {
       <section className="panel ai-config-panel">
         <div>
           <p className="eyebrow">AI PERSONALIZATION</p>
-          <div className="section-title-row compact"><h2>AI 个性化配置</h2><Pill tone={workspace.gateway?.ai?.configured ? "green" : "amber"}>{workspace.gateway?.ai?.configured ? "当前会话已配置" : "需要配置"}</Pill></div>
-          <p>模型只生成模板中的 <code>{"{{personalized_hook}}"}</code>，不会修改报价、交付要求、CTA 或签名。API Key 只保存在本地网关内存中，重启后需要重新输入。</p>
+          <div className="section-title-row compact"><h2>AI 个性化配置</h2><Pill tone={workspace.gateway?.ai?.configured ? "green" : "neutral"}>{workspace.gateway?.ai?.configured ? "当前会话已配置" : "纯模板可跳过"}</Pill></div>
+          <p>仅 AI 个性化项目需要配置。模型只生成模板中的 <code>{"{{personalized_hook}}"}</code>，不会修改报价、交付要求、CTA 或签名。API Key 只保存在本地网关内存中，重启后需要重新输入。</p>
         </div>
         <form onSubmit={(event) => { event.preventDefault(); postSend({ action: "configure_ai", ai: { provider: "anthropic", model: aiModel, api_key: aiKey } }).then(() => setAiKey("")); }}>
           <label><span>模型</span><input required value={aiModel} onChange={(event) => setAiModel(event.target.value)} /></label>
@@ -484,6 +493,8 @@ function Replies({ workspace, project }: any) {
 }
 
 function Safety({ workspace }: any) {
+  const selectedProject = workspace.projects?.find((item: any) => item.id === workspace.selected_project_id) || workspace.projects?.[0];
+  const aiRequired = selectedProject?.personalization_mode === "ai";
   const controls = [
     ["不可变审批批次", "From、To、Subject、Body 和项目发件分配使用 SHA-256 锁定"],
     ["批次单次入队", "浏览器只提交一次 run_id，双击和断网重试返回同一运行实例"],
@@ -495,10 +506,36 @@ function Safety({ workspace }: any) {
   const readiness = [
     ["项目数据", true, "已启用持久化与用户隔离"],
     ["发送网关", workspace.gateway?.online, workspace.gateway?.online ? "本地网关在线" : "启动 npm run mvp"],
-    ["AI个性化", workspace.gateway?.ai?.configured, workspace.gateway?.ai?.configured ? "当前会话已配置" : "需在邮箱账户页配置"],
+    ["AI个性化", !aiRequired || workspace.gateway?.ai?.configured, !aiRequired ? "当前项目使用纯模板" : workspace.gateway?.ai?.configured ? "当前会话已配置" : "需在邮箱账户页配置"],
     ["发件邮箱", workspace.runtime_senders?.some((sender: any) => sender.verified), workspace.runtime_senders?.some((sender: any) => sender.verified) ? "至少一个邮箱已验证" : "尚无已验证邮箱"],
   ];
   return <><div className="page-heading"><div><p className="eyebrow">GUARDRAILS / AUDIT</p><h1>安全门禁与审计</h1><p className="lede">项目管理不会绕开首次建联 Agent 的幂等、额度、稳定 Message-ID、运行锁和全局熔断。</p></div><Pill tone={workspace.gateway?.circuit?.open ? "red" : "green"}>{workspace.gateway?.circuit?.open ? "全局熔断已打开" : "外发熔断器正常"}</Pill></div><section className="readiness-grid">{readiness.map(([title, ready, detail]) => <article className="panel readiness-card" key={String(title)}><Pill tone={ready ? "green" : "amber"}>{ready ? "READY" : "SETUP"}</Pill><b>{title}</b><small>{detail}</small></article>)}</section>{workspace.gateway?.circuit?.open && <section className="critical-banner"><b>禁止继续发送</b><p>{workspace.gateway.circuit.reason || "存在未解决的投递结果"}</p></section>}<section className="safety-grid">{controls.map(([title, text], index) => <article className="panel safety-card" key={title}><span className="safety-index">0{index + 1}</span><div><h2>{title}</h2><p>{text}</p></div><Pill tone="green">ACTIVE</Pill></article>)}</section><section className="panel audit-stream"><div className="section-title-row compact"><div><p className="eyebrow">AUDIT EVENTS</p><h2>最近项目事件</h2></div><code>D1 append-only view</code></div>{workspace.audit_events.map((event: any) => <div className="audit-row" key={event.id}><time>{new Date(event.created_at).toLocaleString("zh-CN", { hour12: false })}</time><span className="event-dot"></span><b>{event.event_type}</b><code>{event.entity_id}</code></div>)}</section></>;
+}
+
+function SetupWizard({ workspace, project, busy, close, saveMode, openSettings }: any) {
+  const [mode, setMode] = useState(project?.personalization_mode || "template");
+  const senderReady = workspace.runtime_senders?.some((sender: any) => sender.verified) === true;
+  const aiReady = workspace.gateway?.ai?.configured === true;
+  const locked = ["queued", "sending", "paused", "failed", "completed", "delivery_unknown"].includes(project?.status);
+  async function continueSetup() {
+    if (project && mode !== project.personalization_mode && !locked) {
+      await saveMode({ action: "update_project", project_id: project.id, personalization_mode: mode });
+    }
+    close();
+    if (!senderReady || (mode === "ai" && !aiReady)) openSettings();
+  }
+  return (
+    <Modal title="首次使用初始化" close={close}>
+      <div className="setup-wizard">
+        <div className="setup-intro"><span>3 步完成</span><h3>先完成发送环境，再创建正式批次</h3><p>初始化只检查本机发送网关，不会发送任何邮件。所有正式邮件仍需逐封审批并二次确认。</p></div>
+        <section className="setup-step"><i>01</i><div><b>选择邮件生成方式</b><p>纯模板不调用大模型；AI 模式只润色个性化开场。</p><select disabled={locked} value={mode} onChange={(event) => setMode(event.target.value)}><option value="template">纯模板（不调用 AI）</option><option value="ai">AI 个性化开场</option></select>{locked && <small>项目已有发送记录，生成方式已锁定。</small>}</div><Pill tone="green">已选择</Pill></section>
+        <section className="setup-step"><i>02</i><div><b>连接邮件池</b><p>添加 Gmail、Outlook 或 SMTP，并完成连接测试。支持多个发件邮箱按项目分配。</p></div><Pill tone={senderReady ? "green" : "amber"}>{senderReady ? "已就绪" : "待设置"}</Pill></section>
+        <section className="setup-step"><i>03</i><div><b>配置模型 API</b><p>{mode === "ai" ? "AI 个性化模式需要配置 Anthropic API Key。" : "纯模板模式会跳过大模型，本项可稍后配置。"}</p></div><Pill tone={mode !== "ai" || aiReady ? "green" : "amber"}>{mode !== "ai" ? "无需配置" : aiReady ? "已就绪" : "待设置"}</Pill></section>
+        <div className="setup-note">当前项目：<b>{project?.name || "尚未创建项目"}</b> · 当前模式：<b>{mode === "ai" ? "AI 个性化" : "纯模板"}</b></div>
+        <footer className="setup-actions"><button className="secondary-button" onClick={close}>稍后设置</button><button className="primary-button" disabled={busy} onClick={continueSetup}>{busy ? "正在保存…" : senderReady && (mode !== "ai" || aiReady) ? "保存并进入工作台" : "保存并前往邮箱/API 设置"}</button></footer>
+      </div>
+    </Modal>
+  );
 }
 
 export default function Home() {
@@ -511,6 +548,8 @@ export default function Home() {
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showRecipients, setShowRecipients] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
+  const [setupPrompted, setSetupPrompted] = useState(false);
   const [job, setJob] = useState<any>(null);
 
   async function load(projectId = selectedProjectId) {
@@ -524,6 +563,13 @@ export default function Home() {
 
   const project = workspace?.projects?.find((item: any) => item.id === selectedProjectId) || workspace?.projects?.[0] || null;
   const latestBatch = workspace?.batches?.[0];
+  const senderReady = workspace?.runtime_senders?.some((sender: any) => sender.verified) === true;
+  const setupComplete = senderReady && (project?.personalization_mode !== "ai" || workspace?.gateway?.ai?.configured === true);
+  useEffect(() => {
+    if (!workspace || setupPrompted) return;
+    setSetupPrompted(true);
+    if (!setupComplete) setShowSetup(true);
+  }, [workspace, setupComplete, setupPrompted]);
   useEffect(() => {
     if (!latestBatch?.job_id || !["queued", "sending"].includes(latestBatch.status)) return;
     let cancelled = false;
@@ -598,13 +644,14 @@ export default function Home() {
         <div className="operator"><Avatar name={workspace.operator?.email || "Vira"} tone="blue"/><div><b>{workspace.operator?.mode === "workspace" ? "已登录操作员" : "本地操作员"}</b><small>{workspace.operator?.email || "Project Manager"}</small></div><button aria-label="更多" disabled>•••</button></div>
       </aside>
       <section className="workspace">
-        <header className="topbar"><div className="breadcrumb"><span>Projects</span><i>/</i><b>{project?.name || "项目中心"}</b></div><div className="topbar-right"><div className="test-chip"><span>✓</span>{workspace.projects.length} 个项目</div><div className="clock"><span className={`pulse small ${workspace.gateway?.online ? "" : "offline"}`}></span>{workspace.gateway?.online ? "发送网关在线" : "仅项目管理"}</div></div></header>
+        <header className="topbar"><div className="breadcrumb"><span>Projects</span><i>/</i><b>{project?.name || "项目中心"}</b></div><div className="topbar-right"><button className={`setup-chip ${setupComplete ? "ready" : ""}`} onClick={() => setShowSetup(true)}><span>{setupComplete ? "✓" : "!"}</span>{setupComplete ? "初始化已完成" : "完成初始化设置"}</button><div className="test-chip"><span>✓</span>{workspace.projects.length} 个项目</div><div className="clock"><span className={`pulse small ${workspace.gateway?.online ? "" : "offline"}`}></span>{workspace.gateway?.online ? "发送网关在线" : "仅项目管理"}</div></div></header>
         {notice && <div className={`toast ${notice.tone}`}><span>{notice.text}</span><button onClick={() => setNotice(null)}>×</button></div>}
         <div className="page-content" key={`${view}-${project?.id || "none"}`}>{content}</div>
       </section>
       {showCreate && <CreateProjectModal workspace={workspace} close={() => setShowCreate(false)} submit={postWorkspace} busy={busy}/>}
       {showImport && <ImportCreatorsModal project={project} close={() => setShowImport(false)} submit={postWorkspace} busy={busy}/>}
       {showRecipients && project && <RecipientModal workspace={workspace} project={project} close={() => setShowRecipients(false)} submit={postWorkspace} busy={busy}/>}
+      {showSetup && <SetupWizard workspace={workspace} project={project} busy={busy} close={() => setShowSetup(false)} saveMode={postWorkspace} openSettings={() => setView("senders")}/>}
     </main>
   );
 }

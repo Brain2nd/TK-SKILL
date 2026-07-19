@@ -46,15 +46,22 @@ function normalizeCampaign(value: unknown) {
   return String(value || "").trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 100);
 }
 
-function assertTemplate(subject: unknown, body: unknown) {
+function normalizePersonalizationMode(value: unknown) {
+  const mode = String(value || "template").trim().toLowerCase();
+  if (mode !== "template" && mode !== "ai") throw new Error("邮件生成方式必须是纯模板或 AI 个性化");
+  return mode;
+}
+
+function assertTemplate(subject: unknown, body: unknown, requirePersonalization = false) {
   const cleanSubject = String(subject || "").trim();
   const cleanBody = String(body || "").replace(/\r\n?/g, "\n").trim();
   if (!cleanSubject || /\r|\n/.test(cleanSubject)) throw new Error("邮件主题必须是一行非空文本");
   if (!cleanBody) throw new Error("邮件正文不能为空");
-  if ((cleanBody.match(/\{\{personalized_hook\}\}/g) || []).length !== 1) {
-    throw new Error("正文必须且只能包含一个 {{personalized_hook}} 段落");
+  const hookCount = (cleanBody.match(/\{\{personalized_hook\}\}/g) || []).length;
+  if (hookCount > 1 || (requirePersonalization && hookCount !== 1)) {
+    throw new Error(requirePersonalization ? "AI 个性化模式必须且只能包含一个 {{personalized_hook}} 段落" : "正文最多包含一个 {{personalized_hook}} 段落");
   }
-  if (!cleanBody.split(/\n\n/).some((part) => part.trim() === "{{personalized_hook}}")) {
+  if (hookCount === 1 && !cleanBody.split(/\n\n/).some((part) => part.trim() === "{{personalized_hook}}")) {
     throw new Error("{{personalized_hook}} 必须独占一个段落");
   }
   if ((cleanBody.match(/\{\{sender_name\}\}/g) || []).length !== 1) {
@@ -95,7 +102,8 @@ async function ensureSchema() {
       id TEXT PRIMARY KEY, owner_email TEXT NOT NULL, name TEXT NOT NULL, campaign_id TEXT NOT NULL,
       brand_name TEXT NOT NULL DEFAULT '', market TEXT NOT NULL DEFAULT '', offer_amount INTEGER NOT NULL DEFAULT 0,
       offer_currency TEXT NOT NULL DEFAULT 'EUR', target_count INTEGER NOT NULL DEFAULT 0,
-      default_sender_id TEXT NOT NULL DEFAULT '', subject_template TEXT NOT NULL, body_template TEXT NOT NULL,
+      default_sender_id TEXT NOT NULL DEFAULT '', personalization_mode TEXT NOT NULL DEFAULT 'template',
+      subject_template TEXT NOT NULL, body_template TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'draft', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
@@ -188,6 +196,10 @@ async function ensureSchema() {
   if (!(creatorColumns.results || []).some((column: any) => column.name === "source_updated_at")) {
     await db.prepare("ALTER TABLE creators ADD COLUMN source_updated_at TEXT NOT NULL DEFAULT ''").run();
   }
+  const projectColumns = await db.prepare("PRAGMA table_info(projects)").all();
+  if (!(projectColumns.results || []).some((column: any) => column.name === "personalization_mode")) {
+    await db.prepare("ALTER TABLE projects ADD COLUMN personalization_mode TEXT NOT NULL DEFAULT 'template'").run();
+  }
 }
 
 async function audit(ownerEmail: string, projectId: string, entityType: string, entityId: string, eventType: string, details: unknown = {}) {
@@ -225,8 +237,8 @@ async function seedDemo(ownerEmail: string) {
     await db.prepare(
       `INSERT INTO projects (
         id, owner_email, name, campaign_id, brand_name, market, offer_amount, offer_currency, target_count,
-        default_sender_id, subject_template, body_template, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, 'draft', ?, ?)`,
+        default_sender_id, personalization_mode, subject_template, body_template, status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', 'template', ?, ?, 'draft', ?, ?)`,
     ).bind(
       projectId, ownerEmail, "西班牙 TikTok Shop €20", seedCampaignId,
       "TikTok Shop", "ES", 20, "EUR", demoData.report.planned, DEFAULT_SUBJECT, DEFAULT_BODY, now(), now(),
@@ -264,6 +276,7 @@ function mapProject(row: any) {
     offer_currency: row.offer_currency,
     target_count: Number(row.target_count || 0),
     default_sender_id: row.default_sender_id || "",
+    personalization_mode: normalizePersonalizationMode(row.personalization_mode),
     subject_template: row.subject_template,
     body_template: row.body_template,
     status: row.status,
@@ -377,7 +390,8 @@ export async function createProject(ownerEmail: string, input: any) {
   if (!name) throw new Error("项目名称不能为空");
   const campaignId = normalizeCampaign(input.campaign_id || `${name}-${crypto.randomUUID().slice(0, 8)}`);
   if (campaignId.length < 3) throw new Error("Campaign ID 无效");
-  const template = assertTemplate(input.subject_template || DEFAULT_SUBJECT, input.body_template || DEFAULT_BODY);
+  const personalizationMode = normalizePersonalizationMode(input.personalization_mode);
+  const template = assertTemplate(input.subject_template || DEFAULT_SUBJECT, input.body_template || DEFAULT_BODY, personalizationMode === "ai");
   const creatorIds: string[] = [...new Set<string>((Array.isArray(input.creator_ids) ? input.creator_ids : []).map((value: unknown) => String(value)))];
   if (!creatorIds.length) throw new Error("至少选择一位达人");
   const targetCount = Math.min(500, Math.max(1, Number(input.target_count || creatorIds.length)));
@@ -389,13 +403,13 @@ export async function createProject(ownerEmail: string, input: any) {
   await db.prepare(
     `INSERT INTO projects (
       id, owner_email, name, campaign_id, brand_name, market, offer_amount, offer_currency, target_count,
-      default_sender_id, subject_template, body_template, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`,
+      default_sender_id, personalization_mode, subject_template, body_template, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`,
   ).bind(
     projectId, ownerEmail, name, campaignId, String(input.brand_name || "").trim().slice(0, 100),
     String(input.market || "").trim().slice(0, 40), Math.max(0, Number(input.offer_amount || 0)),
     String(input.offer_currency || "EUR").trim().toUpperCase().slice(0, 8), targetCount,
-    defaultSenderId, template.subject, template.body, now(), now(),
+    defaultSenderId, personalizationMode, template.subject, template.body, now(), now(),
   ).run();
   const selected = await db.prepare(`SELECT id, default_hook FROM creators WHERE id IN (${creatorIds.map(() => "?").join(",")})`).bind(...creatorIds).all();
   if ((selected.results || []).length !== creatorIds.length) throw new Error("选择中包含不存在的达人");
@@ -410,7 +424,8 @@ export async function createProject(ownerEmail: string, input: any) {
 export async function updateProject(ownerEmail: string, input: any) {
   const project = await projectForOwner(ownerEmail, String(input.project_id || ""));
   await assertProjectEditable(project.id);
-  const template = assertTemplate(input.subject_template ?? project.subject_template, input.body_template ?? project.body_template);
+  const personalizationMode = normalizePersonalizationMode(input.personalization_mode ?? project.personalization_mode);
+  const template = assertTemplate(input.subject_template ?? project.subject_template, input.body_template ?? project.body_template, personalizationMode === "ai");
   const name = String(input.name ?? project.name).trim().slice(0, 100);
   if (!name) throw new Error("项目名称不能为空");
   const defaultSenderId = String(input.default_sender_id ?? project.default_sender_id);
@@ -418,14 +433,14 @@ export async function updateProject(ownerEmail: string, input: any) {
   await invalidateDraftBatches(project.id);
   await database().prepare(
     `UPDATE projects SET name = ?, brand_name = ?, market = ?, offer_amount = ?, offer_currency = ?,
-      target_count = ?, default_sender_id = ?, subject_template = ?, body_template = ?, status = 'draft', updated_at = ?
+      target_count = ?, default_sender_id = ?, personalization_mode = ?, subject_template = ?, body_template = ?, status = 'draft', updated_at = ?
      WHERE id = ? AND owner_email = ?`,
   ).bind(
     name, String(input.brand_name ?? project.brand_name).trim().slice(0, 100),
     String(input.market ?? project.market).trim().slice(0, 40), Math.max(0, Number(input.offer_amount ?? project.offer_amount)),
     String(input.offer_currency ?? project.offer_currency).trim().toUpperCase().slice(0, 8),
     Math.min(500, Math.max(1, Number(input.target_count ?? project.target_count))),
-    defaultSenderId, template.subject, template.body, now(), project.id, ownerEmail,
+    defaultSenderId, personalizationMode, template.subject, template.body, now(), project.id, ownerEmail,
   ).run();
   await audit(ownerEmail, project.id, "project", project.id, "project.updated", { approval_invalidated: true });
 }
@@ -646,6 +661,7 @@ async function personalizationStateForProject(ownerEmail: string, projectId: str
     project: {
       id: project.id,
       brand_name: project.brand_name || "",
+      personalization_mode: normalizePersonalizationMode(project.personalization_mode),
       subject: project.subject_template,
       body: project.body_template,
     },
@@ -673,6 +689,7 @@ async function personalizationStateForProject(ownerEmail: string, projectId: str
       id: project.id,
       campaign_id: project.campaign_id,
       brand_name: project.brand_name || "",
+      personalization_mode: normalizePersonalizationMode(project.personalization_mode),
       subject: project.subject_template,
       body: project.body_template,
     },
@@ -704,7 +721,11 @@ async function personalizationStateForProject(ownerEmail: string, projectId: str
 
 export async function personalizationRequestForProject(ownerEmail: string, projectId: string) {
   const state = await personalizationStateForProject(ownerEmail, projectId);
-  return { snapshot_hash: state.snapshotHash, ...state.publicRequest };
+  return {
+    snapshot_hash: state.snapshotHash,
+    personalization_mode: normalizePersonalizationMode(state.project.personalization_mode),
+    ...state.publicRequest,
+  };
 }
 
 function safePersonalizedHook(value: unknown) {
@@ -716,6 +737,9 @@ function safePersonalizedHook(value: unknown) {
 export async function createPendingBatch(ownerEmail: string, projectId: string, personalization?: any) {
   const state = await personalizationStateForProject(ownerEmail, projectId);
   const { project, rows: recipients } = state;
+  const personalizationMode = normalizePersonalizationMode(project.personalization_mode);
+  if (personalizationMode === "ai" && !personalization) throw new Error("AI 个性化模式需要先生成达人开场");
+  if (personalizationMode === "template" && personalization) throw new Error("纯模板模式不会接收或调用 AI 个性化结果");
   let personalizationByRecipient = new Map<string, any>();
   if (personalization) {
     if (String(personalization.snapshot_hash || "") !== state.snapshotHash) {
@@ -738,7 +762,7 @@ export async function createPendingBatch(ownerEmail: string, projectId: string, 
     const to = normalizeEmail(row.contact_email);
     recipientEndpoints.add(to);
     const personalized = personalizationByRecipient.get(String(row.id));
-    const hook = personalized ? safePersonalizedHook(personalized.hook) : safePersonalizedHook(row.personalized_hook || row.default_hook || "");
+    const hook = personalizationMode === "template" ? "" : safePersonalizedHook(personalized?.hook);
     const parsedWarnings = parseJson(row.review_warnings_json);
     const reviewWarnings = Array.isArray(parsedWarnings) ? [...parsedWarnings] : [];
     if (personalized?.method === "ai" && (!Array.isArray(personalized.evidence_ids) || !personalized.evidence_ids.length)) {
@@ -790,7 +814,7 @@ export async function createPendingBatch(ownerEmail: string, projectId: string, 
   await audit(ownerEmail, project.id, "batch", batchId, "batch.created", {
     items: items.length,
     payload_hash: payloadHash,
-    personalization: personalization ? "ai_with_guarded_fallback" : "stored_hook",
+    personalization: personalizationMode === "ai" ? "ai_with_guarded_fallback" : "template_only",
     ai_fallback_count: fallbackCount,
   });
   return batchId;

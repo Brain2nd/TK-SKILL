@@ -44,6 +44,9 @@ test("project UI delegates persistence and sending to server routes", async () =
   assert.match(page, /应用密码.*只写/s);
   assert.match(page, /AI 个性化配置/);
   assert.match(page, /AI 生成.*封审批邮件/);
+  assert.match(page, /纯模板（不调用 AI）/);
+  assert.match(page, /首次使用初始化/);
+  assert.match(page, /完成初始化设置/);
   assert.match(page, /导入达人/);
   assert.match(page, /CSV、JSON 或 JSONL/);
   assert.doesNotMatch(page, /\bsendMail\s*\(/i);
@@ -52,6 +55,7 @@ test("project UI delegates persistence and sending to server routes", async () =
   assert.doesNotMatch(workspaceRoute, /createPendingBatch/);
   assert.match(sendRoute, /personalizationRequestForProject/);
   assert.match(sendRoute, /personalize-batch/);
+  assert.match(sendRoute, /personalizationRequest\.personalization_mode === "ai"/);
   assert.match(sendRoute, /createPendingBatch/);
   assert.match(sendRoute, /execute_batch/);
   assert.match(gateway, /personalizeHook/);
@@ -61,5 +65,23 @@ test("project UI delegates persistence and sending to server routes", async () =
   assert.match(gateway, /withRunLock/);
   assert.match(gateway, /jobs\.get\(parsed\.runId\)/);
   assert.match(schema, /sendBatchItems/);
+  assert.match(schema, /personalizationMode: text\("personalization_mode"\)/);
   assert.doesNotMatch(schema, /password|appPassword|smtpPassword/i);
+});
+
+test("pure-template projects bypass AI while retaining approval controls", async () => {
+  const [store, route, packageJson, launcher] = await Promise.all([
+    readFile(new URL("../db/outreach-store.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/send/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../windows-launcher/LoopMvpLauncher.cs", import.meta.url), "utf8"),
+  ]);
+  assert.match(store, /personalizationMode === "template" \? ""/);
+  assert.match(store, /personalization: personalizationMode === "ai" \? "ai_with_guarded_fallback" : "template_only"/);
+  assert.match(store, /AI 个性化模式需要先生成达人开场/);
+  assert.match(route, /if \(personalizationRequest\.personalization_mode === "ai"\)/);
+  assert.doesNotMatch(route, /gateway\("\/personalize-batch"[\s\S]+createPendingBatch\(owner, projectId, result\.personalization\)/);
+  assert.equal(JSON.parse(packageJson).scripts["package:windows"].includes("build.ps1"), true);
+  assert.match(launcher, /首次使用请按提示配置邮件池和 API/);
+  assert.match(launcher, /taskkill\.exe/);
 });
