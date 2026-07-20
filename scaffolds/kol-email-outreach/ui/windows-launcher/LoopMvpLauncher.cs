@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -233,7 +234,9 @@ namespace LoopCreatorOs
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true
+                RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
             };
             if (!String.IsNullOrEmpty(nodeDirectory))
                 start.EnvironmentVariables["PATH"] = nodeDirectory + ";" + (Environment.GetEnvironmentVariable("PATH") ?? "");

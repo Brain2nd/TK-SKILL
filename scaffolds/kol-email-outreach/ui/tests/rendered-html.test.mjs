@@ -70,11 +70,12 @@ test("project UI delegates persistence and sending to server routes", async () =
 });
 
 test("pure-template projects bypass AI while retaining approval controls", async () => {
-  const [store, route, packageJson, launcher] = await Promise.all([
+  const [store, route, packageJson, launcher, starter] = await Promise.all([
     readFile(new URL("../db/outreach-store.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/send/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../windows-launcher/LoopMvpLauncher.cs", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/start-mvp.mjs", import.meta.url), "utf8"),
   ]);
   assert.match(store, /personalizationMode === "template" \? ""/);
   assert.match(store, /personalization: personalizationMode === "ai" \? "ai_with_guarded_fallback" : "template_only"/);
@@ -84,4 +85,6 @@ test("pure-template projects bypass AI while retaining approval controls", async
   assert.equal(JSON.parse(packageJson).scripts["package:windows"].includes("build.ps1"), true);
   assert.match(launcher, /首次使用请按提示配置邮件池和 API/);
   assert.match(launcher, /taskkill\.exe/);
+  assert.match(starter, /process\.env\.ComSpec \|\| "cmd\.exe"/);
+  assert.doesNotMatch(starter, /spawn\("npm\.cmd"/);
 });
