@@ -1,5 +1,9 @@
 # TK-SKILL
 
+[简体中文](README.zh-CN.md) | English
+
+> Looking for the LOOP Creator OS MVP? Start with the [Chinese user guide](README.zh-CN.md) or the [detailed workspace documentation](scaffolds/kol-email-outreach/ui/README.md).
+
 Collected Lark/Feishu agent skills plus TikHub-powered KOL workflow scaffolds.
 
 ## Contents
