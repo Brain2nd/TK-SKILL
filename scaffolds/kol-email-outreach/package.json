@@ -4,16 +4,28 @@
   "description": "KOL CRM outreach automation — plain Node.js modules",
   "type": "module",
   "scripts": {
-    "outreach": "node auto_outreach.mjs",
-    "monitor": "node auto_reply_monitor.mjs"
+    "outreach:setup": "node setup_first_outreach_fields.mjs",
+    "outreach": "node auto_outreach.mjs --dry-run",
+    "outreach:approve": "node approve_outreach_batch.mjs",
+    "outreach:execute": "node auto_outreach.mjs --execute",
+    "outreach:preview-analyzer": "node preview_analyzer_batch.mjs",
+    "outreach:monitor": "node first_outreach_monitor.mjs --dry-run",
+    "outreach:monitor:execute": "node first_outreach_monitor.mjs --execute",
+    "outreach:reconcile": "node reconcile_outreach.mjs",
+    "outreach:reconcile:execute": "node reconcile_outreach.mjs --execute",
+    "outreach:resolve-delivery": "node resolve_delivery_unknown.mjs",
+    "monitor": "node first_outreach_monitor.mjs --dry-run",
+    "monitor:legacy": "node auto_reply_monitor.mjs",
+    "test": "node --test"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.19.0"
   },
   "dependencies": {
-    "@larksuiteoapi/node-sdk": "^1.61.0",
-    "imap-simple": "^5.1.0",
-    "mailparser": "^3.7.2",
-    "nodemailer": "^6.9.16"
+    "@aws-sdk/client-sesv2": "^3.1091.0",
+    "@larksuiteoapi/node-sdk": "^1.71.1",
+    "imapflow": "^1.4.7",
+    "mailparser": "^3.9.14",
+    "nodemailer": "^9.0.3"
   }
 }

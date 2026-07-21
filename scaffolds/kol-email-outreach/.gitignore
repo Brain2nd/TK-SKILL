@@ -1,4 +1,9 @@
 config.json
+sender_state.json
+outreach_journal.jsonl
+outreach_run.lock
+first_outreach_monitor_state.json
+outreach_batches/
 node_modules/
 kol-crm-mcp/node_modules/
 tikhub-mcp/node_modules/

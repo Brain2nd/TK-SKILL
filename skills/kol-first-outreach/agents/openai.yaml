@@ -1,0 +1,4 @@
+interface:
+  display_name: "KOL First Outreach"
+  short_description: "Safely run first contact, reply handoff, and one follow-up"
+  default_prompt: "Use $kol-first-outreach to validate the persona handoff, create an immutable dry-run batch, require explicit approval before sending, structure rate replies into the private pool, and plan one seven-day follow-up without entering later campaign stages."

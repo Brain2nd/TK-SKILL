@@ -46,7 +46,7 @@ function val(rec, name) {
 /** Read prior outbound chain for a creator (oldest → newest, only entries with Message-ID). */
 export async function fetchOutboundChain(env, creatorHandle, limit = 50) {
   const tok = await btToken(env);
-  const r = await fetch(
+  const response = await fetch(
     `https://open.feishu.cn/open-apis/bitable/v1/apps/${env.KOL_CRM_APP_TOKEN}/tables/${env.KOL_TBL_EMAIL_LOG}/records/search?page_size=${limit}`,
     {
       method: "POST",
@@ -62,7 +62,11 @@ export async function fetchOutboundChain(env, creatorHandle, limit = 50) {
         sort: [{ field_name: "Sent At", desc: false }], // oldest → newest
       }),
     }
-  ).then(r => r.json());
+  );
+  const r = await response.json();
+  if (!response.ok || r?.code !== 0) {
+    throw new Error(`email chain lookup failed: ${r?.msg || `HTTP ${response.status}`}`);
+  }
   const items = r?.data?.items || [];
   const chain = [];
   for (const it of items) {
@@ -81,14 +85,50 @@ export async function fetchOutboundChain(env, creatorHandle, limit = 50) {
 }
 
 function ensureBracketed(mid) {
-  if (!mid) return "";
-  return mid.startsWith("<") ? mid : `<${mid}>`;
+  const normalized = validMessageId(mid);
+  return normalized ? `<${normalized}>` : "";
 }
 
 function makeReplySubject(prevSubject, fallbackSubject) {
   const s = (prevSubject || fallbackSubject || "").trim();
   if (/^re:\s/i.test(s)) return s;
   return `Re: ${s}`;
+}
+
+function comparableMessageId(mid) {
+  return validMessageId(mid).toLowerCase();
+}
+
+function validMessageId(mid) {
+  const value = String(mid || "").trim();
+  if (!value || /[\r\n]/.test(value)) return "";
+  const startsWrapped = value.startsWith("<");
+  const endsWrapped = value.endsWith(">");
+  if (startsWrapped !== endsWrapped) return "";
+  const unwrapped = startsWrapped ? value.slice(1, -1) : value;
+  if (!unwrapped || /[\s<>]/.test(unwrapped)) return "";
+  return unwrapped;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Build HTML from the exact text body and preserve at most one existing tracking pixel. */
+export function renderEmailHtml(body, sourceHtml = "") {
+  const parts = String(body || "").split(/(https?:\/\/[^\s<>"']+)/g);
+  const content = parts.map((part, index) => {
+    if (index % 2 === 0) return escapeHtml(part).replace(/\n/g, "<br>");
+    const escaped = escapeHtml(part);
+    return `<a href="${escaped}">${escaped}</a>`;
+  }).join("");
+  const pixel = String(sourceHtml).match(/<img\b[^>]*\/track\/open[^>]*>/i)?.[0] || "";
+  return pixel ? `${content}<br>${pixel}` : content;
 }
 
 /**
@@ -127,21 +167,49 @@ function quoteBlock(prev) {
  * Returns an object with private fields (_isReply, _chain) for caller introspection.
  */
 export async function buildEmail(args) {
-  const { creatorHandle, env, to, subject, html, from } = args;
+  const { creatorHandle, env, to, subject, html, from, replyTo, threadMode = "auto" } = args;
   const body = args.body || "";
-  const chain = await fetchOutboundChain(env, creatorHandle);
+  let chain = threadMode === "new"
+    ? []
+    : Array.isArray(args.outboundChain)
+      ? args.outboundChain
+      : await fetchOutboundChain(env, creatorHandle);
+  if (threadMode === "reply") {
+    if (!validMessageId(args.replyToMessageId)) {
+      throw new Error(`cannot send threaded follow-up for @${creatorHandle}: original Message-ID is missing or invalid`);
+    }
+    if (chain.some(item => !validMessageId(item?.messageId))) {
+      throw new Error(`cannot send threaded follow-up for @${creatorHandle}: outbound chain contains an invalid Message-ID`);
+    }
+    const expected = comparableMessageId(args.replyToMessageId);
+    const match = chain.find(item => comparableMessageId(item.messageId) === expected);
+    if (!match) throw new Error(`approved thread root not found for @${creatorHandle}`);
+    chain = [match];
+  }
+  if (threadMode === "reply" && chain.length === 0) {
+    throw new Error(`cannot send threaded follow-up for @${creatorHandle}: outbound chain is empty`);
+  }
   const isReply = chain.length > 0;
-  const opts = { to, from, subject: subject || "", text: body, html };
+  const opts = { to, from, subject: subject || "", text: body, html: renderEmailHtml(body, html) };
+  if (replyTo) {
+    const normalizedReplyTo = String(replyTo).trim().toLowerCase();
+    if (/\r|\n/.test(normalizedReplyTo) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedReplyTo)) {
+      throw new Error("replyTo is invalid");
+    }
+    opts.replyTo = normalizedReplyTo;
+  }
+  if (args.messageId) {
+    const stableMessageId = ensureBracketed(args.messageId);
+    if (!stableMessageId) throw new Error("outbound Message-ID is invalid");
+    opts.messageId = stableMessageId;
+  }
   if (isReply) {
     const last = chain[chain.length - 1];
     opts.subject = makeReplySubject(last.subject, subject);
     opts.text = body + quoteBlock(last);
     // Regenerate HTML from current (personalized) body — using original bodyHtml causes
     // Gmail to collapse the reply as duplicate content since it's identical to the first email.
-    const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
-    opts.html = body
-      .replace(urlRegex, u => `<a href="${u}">${u}</a>`)
-      .replace(/\n/g, "<br>");
+    opts.html = renderEmailHtml(body, html);
     opts.headers = {
       "In-Reply-To": ensureBracketed(last.messageId),
       "References": chain.map(c => ensureBracketed(c.messageId)).join(" "),
@@ -170,6 +238,9 @@ export async function sendThreaded(args) {
     port: smtp.port,
     secure: smtp.secure !== false,
     auth: smtp.auth,
+    connectionTimeout: Number(smtp.connectionTimeout || 20000),
+    greetingTimeout: Number(smtp.greetingTimeout || 20000),
+    socketTimeout: Number(smtp.socketTimeout || 60000),
   });
   // Strip our private fields before passing to nodemailer
   const _isReply = opts._isReply;
@@ -186,9 +257,14 @@ export async function sendThreaded(args) {
       subject: opts.subject,
     };
   } catch (e) {
+    const explicitReject = e?.code === "EAUTH" || e?.code === "EENVELOPE" ||
+      (Number.isInteger(e?.responseCode) && e.responseCode >= 400);
     return {
       ok: false,
       error: e.message,
+      uncertain: !explicitReject,
+      errorCode: e?.code || "",
+      responseCode: e?.responseCode || null,
       isReply: _isReply,
       chainLength: _chain?.length || 0,
     };

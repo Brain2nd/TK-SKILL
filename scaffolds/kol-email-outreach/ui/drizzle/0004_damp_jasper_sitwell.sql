@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `personalization_mode` text DEFAULT 'template' NOT NULL;

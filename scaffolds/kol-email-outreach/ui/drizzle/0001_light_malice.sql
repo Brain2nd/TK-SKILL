@@ -1,0 +1,1 @@
+ALTER TABLE `send_batches` ADD `job_revision` integer DEFAULT 0 NOT NULL;
