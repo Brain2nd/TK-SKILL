@@ -28,6 +28,12 @@ const journal = createOutreachJournal(resolve(process.env.LOOP_OUTREACH_JOURNAL 
 const lockPath = resolve(process.env.LOOP_OUTREACH_LOCK || resolve(coreRoot, "outreach_run.lock"));
 const requireFromCore = createRequire(resolve(coreRoot, "package.json"));
 const nodemailer = requireFromCore("nodemailer");
+const {
+  SESv2Client,
+  GetAccountCommand,
+  GetEmailIdentityCommand,
+  SendEmailCommand,
+} = requireFromCore("@aws-sdk/client-sesv2");
 
 const accounts = new Map();
 const oauthStates = new Map();
@@ -99,7 +105,8 @@ async function bodyJson(req) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
-function publicAccount(account) {
+export function publicAccount(account) {
+  const policy = deliveryPolicyFor(account.accountType, account.provider);
   return {
     id: account.id,
     label: account.label,
@@ -110,12 +117,22 @@ function publicAccount(account) {
     smtp_port: account.smtpPort,
     secure: account.secure,
     provider: account.provider || "custom",
+    account_type: account.accountType || "personal",
     auth_mode: account.authMode || "smtp",
+    aws_region: account.awsRegion || "",
+    production_access: account.productionAccess === true,
     daily_cap: account.dailyCap,
-    configured: Boolean(account.password || account.accessToken || account.refreshToken),
+    configured: Boolean(account.password || account.accessToken || account.refreshToken ||
+      (account.accessKeyId && account.secretAccessKey)),
     verified: account.verified === true,
     last_verified_at: account.lastVerifiedAt || "",
     credential_expires_at: account.expiresAt ? new Date(account.expiresAt).toISOString() : "",
+    safety_policy: {
+      max_daily_cap: policy.maxDailyCap,
+      min_interval_seconds: Math.ceil(policy.minIntervalMs / 1000),
+      tracking_default: "off",
+      followup_mode: "disabled",
+    },
   };
 }
 
@@ -178,6 +195,24 @@ export function validatePersonalizationRequest(input) {
   return { ownerKey, snapshotHash, project, recipients };
 }
 
+export function deliveryPolicyFor(accountTypeInput, providerInput) {
+  const provider = String(providerInput || "custom").trim().toLowerCase();
+  const accountType = String(accountTypeInput || (provider === "ses" ? "company" : "personal")).trim().toLowerCase();
+  if (!["company", "personal"].includes(accountType)) throw new Error("account type must be company or personal");
+  if (provider === "ses" && accountType !== "company") throw new Error("Amazon SES requires the company/domain sender route");
+  if (provider === "ses") return { accountType, maxDailyCap: 5000, minIntervalMs: 2000 };
+  if (accountType === "company") return { accountType, maxDailyCap: 500, minIntervalMs: 10000 };
+  return { accountType, maxDailyCap: 100, minIntervalMs: 30000 };
+}
+
+function validateDailyCap(input, policy, fallback) {
+  const dailyCap = Number(input.daily_cap ?? fallback);
+  if (!Number.isInteger(dailyCap) || dailyCap < 1 || dailyCap > policy.maxDailyCap) {
+    throw new Error(`${policy.accountType} sender daily cap must be between 1 and ${policy.maxDailyCap}`);
+  }
+  return dailyCap;
+}
+
 async function personalizeBatch(input) {
   const request = validatePersonalizationRequest(input);
   const profile = aiProfiles.get(request.ownerKey);
@@ -237,7 +272,8 @@ export function validateSenderInput(input) {
   const smtpPort = Number(input.smtp_port || 0);
   const password = String(input.password || "");
   const fromName = String(input.from_name || "").trim();
-  const dailyCap = Number(input.daily_cap ?? 50);
+  const policy = deliveryPolicyFor(input.account_type, "custom");
+  const dailyCap = validateDailyCap(input, policy, policy.accountType === "company" ? 100 : 25);
   if (!/^[a-f0-9]{16}$/.test(ownerKey)) throw new Error("invalid sender owner scope");
   if (!/^[a-z0-9._-]{1,120}$/i.test(senderId)) throw new Error("invalid sender id");
   if (!email) throw new Error("invalid sender email");
@@ -246,7 +282,6 @@ export function validateSenderInput(input) {
   if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) throw new Error("invalid SMTP port");
   if (!password || password.length > 500) throw new Error("SMTP app password is required");
   if (!fromName || fromName.length > 80 || /\r|\n/.test(fromName)) throw new Error("invalid sender name");
-  if (!Number.isInteger(dailyCap) || dailyCap < 1 || dailyCap > 500) throw new Error("invalid daily sender cap");
   return {
     id: senderId,
     ownerKey,
@@ -258,10 +293,58 @@ export function validateSenderInput(input) {
     smtpPort,
     secure: input.secure !== false,
     provider: "custom",
+    accountType: policy.accountType,
     authMode: "smtp",
+    minIntervalMs: policy.minIntervalMs,
     dailyCap,
     password,
     verified: false,
+    lastVerifiedAt: "",
+  };
+}
+
+export function validateSesSenderInput(input) {
+  const senderId = String(input.id || `sender_${randomUUID()}`).trim();
+  const ownerKey = String(input.owner_key || "").trim().toLowerCase();
+  const email = normalizeEmail(input.from_email);
+  const replyTo = input.reply_to_email ? normalizeEmail(input.reply_to_email) : "";
+  const fromName = String(input.from_name || "").trim();
+  const policy = deliveryPolicyFor(input.account_type || "company", "ses");
+  const dailyCap = validateDailyCap(input, policy, 500);
+  const awsRegion = String(input.aws_region || "").trim().toLowerCase();
+  const accessKeyId = String(input.access_key_id || "").trim();
+  const secretAccessKey = String(input.secret_access_key || "").trim();
+  const sessionToken = String(input.session_token || "").trim();
+  if (!/^[a-f0-9]{16}$/.test(ownerKey)) throw new Error("invalid sender owner scope");
+  if (!/^[a-z0-9._-]{1,120}$/i.test(senderId)) throw new Error("invalid sender id");
+  if (!email) throw new Error("invalid sender email");
+  if (input.reply_to_email && !replyTo) throw new Error("invalid reply-to email");
+  if (!fromName || fromName.length > 80 || /\r|\n/.test(fromName)) throw new Error("invalid sender name");
+  if (!/^[a-z]{2}(?:-gov)?-[a-z0-9-]+-\d$/.test(awsRegion)) throw new Error("invalid AWS region");
+  if (!/^[A-Z0-9]{16,128}$/.test(accessKeyId)) throw new Error("valid AWS access key ID is required");
+  if (secretAccessKey.length < 20 || secretAccessKey.length > 200) throw new Error("valid AWS secret access key is required");
+  if (sessionToken.length > 4096) throw new Error("invalid AWS session token");
+  return {
+    id: senderId,
+    ownerKey,
+    label: String(input.label || fromName).trim().slice(0, 80),
+    fromName,
+    email,
+    replyTo,
+    smtpHost: `email.${awsRegion}.amazonaws.com`,
+    smtpPort: 443,
+    secure: true,
+    provider: "ses",
+    accountType: policy.accountType,
+    authMode: "api",
+    minIntervalMs: policy.minIntervalMs,
+    awsRegion,
+    accessKeyId,
+    secretAccessKey,
+    sessionToken,
+    dailyCap,
+    verified: false,
+    productionAccess: false,
     lastVerifiedAt: "",
   };
 }
@@ -273,14 +356,14 @@ export function validateOAuthSenderInput(input) {
   const email = normalizeEmail(input.from_email);
   const replyTo = input.reply_to_email ? normalizeEmail(input.reply_to_email) : "";
   const fromName = String(input.from_name || "").trim();
-  const dailyCap = Number(input.daily_cap ?? 50);
+  const policy = deliveryPolicyFor(input.account_type, provider);
+  const dailyCap = validateDailyCap(input, policy, policy.accountType === "company" ? 100 : 25);
   if (!/^[a-f0-9]{16}$/.test(ownerKey)) throw new Error("invalid sender owner scope");
   if (!/^[a-z0-9._-]{1,120}$/i.test(senderId)) throw new Error("invalid sender id");
   if (!email) throw new Error("invalid sender email");
   if (input.reply_to_email && !replyTo) throw new Error("invalid reply-to email");
   if (!['gmail', 'outlook'].includes(provider)) throw new Error("OAuth provider must be gmail or outlook");
   if (!fromName || fromName.length > 80 || /\r|\n/.test(fromName)) throw new Error("invalid sender name");
-  if (!Number.isInteger(dailyCap) || dailyCap < 1 || dailyCap > 500) throw new Error("invalid daily sender cap");
   return {
     id: senderId,
     ownerKey,
@@ -292,7 +375,9 @@ export function validateOAuthSenderInput(input) {
     smtpPort: 443,
     secure: true,
     provider,
+    accountType: policy.accountType,
     authMode: "oauth",
+    minIntervalMs: policy.minIntervalMs,
     dailyCap,
     verified: false,
     lastVerifiedAt: "",
@@ -309,6 +394,44 @@ function smtpFor(account) {
     greetingTimeout: 20000,
     socketTimeout: 60000,
   };
+}
+
+function sesClientFor(account) {
+  return new SESv2Client({
+    region: account.awsRegion,
+    credentials: {
+      accessKeyId: account.accessKeyId,
+      secretAccessKey: account.secretAccessKey,
+      ...(account.sessionToken ? { sessionToken: account.sessionToken } : {}),
+    },
+  });
+}
+
+async function verifiedSesIdentity(client, email) {
+  const domain = email.slice(email.lastIndexOf("@") + 1);
+  for (const identity of [domain]) {
+    try {
+      const result = await client.send(new GetEmailIdentityCommand({ EmailIdentity: identity }));
+      if (result.VerifiedForSendingStatus === true && result.DkimAttributes?.Status === "SUCCESS") {
+        return identity;
+      }
+    } catch (error) {
+      if (!["NotFoundException", "BadRequestException"].includes(error?.name)) throw error;
+    }
+  }
+  throw new Error(`SES domain identity and DKIM are not ready for ${domain}`);
+}
+
+async function verifySesAccount(account) {
+  const client = sesClientFor(account);
+  try {
+    const status = await client.send(new GetAccountCommand({}));
+    if (status.SendingEnabled === false) throw new Error("SES sending is disabled for this account");
+    await verifiedSesIdentity(client, account.email);
+    account.productionAccess = status.ProductionAccessEnabled === true;
+  } finally {
+    client.destroy();
+  }
 }
 
 function oauthConfig(provider) {
@@ -498,8 +621,47 @@ async function sendWithOAuth(account, args) {
   }
 }
 
+async function sendWithSes(account, args) {
+  let message;
+  try {
+    message = await mimeMessage(args);
+  } catch (error) {
+    return { ok: false, uncertain: false, errorCode: "SES_BUILD", error: error?.message || String(error) };
+  }
+  const client = sesClientFor(account);
+  try {
+    const response = await client.send(new SendEmailCommand({
+      FromEmailAddress: account.email,
+      Destination: { ToAddresses: [args.to] },
+      ReplyToAddresses: args.replyTo ? [args.replyTo] : undefined,
+      Content: { Raw: { Data: message } },
+      EmailTags: [{ Name: "loop_attempt", Value: String(args.messageId || "").replace(/[<>]/g, "").slice(0, 256) }],
+    }));
+    const providerMessageId = String(response.MessageId || "").trim();
+    if (!providerMessageId) return { ok: false, uncertain: true, errorCode: "SES_NO_MESSAGE_ID", error: "Amazon SES accepted the request without returning a MessageId" };
+    return { ok: true, messageId: providerMessageId, uncertain: false };
+  } catch (error) {
+    const status = Number(error?.$metadata?.httpStatusCode || 0);
+    const name = String(error?.name || "");
+    const message = String(error?.message || "");
+    const authFailure = ["AccessDeniedException", "InvalidClientTokenId", "SignatureDoesNotMatch", "UnrecognizedClientException"].includes(name);
+    const throttled = ["TooManyRequestsException", "LimitExceededException", "ThrottlingException"].includes(name) || status === 429;
+    const accountBlocked = ["AccountSuspendedException", "SendingPausedException", "MailFromDomainNotVerifiedException"].includes(name) || /address is not verified|sandbox/i.test(message);
+    const uncertain = status >= 500 || ["TimeoutError", "ECONNRESET", "ETIMEDOUT"].includes(name) || !status;
+    return {
+      ok: false,
+      uncertain,
+      errorCode: authFailure ? "SES_AUTH" : throttled ? "SES_THROTTLE" : accountBlocked ? "SES_ACCOUNT" : `SES_${name || status || "ERROR"}`,
+      error: message || name || "Amazon SES send failed",
+    };
+  } finally {
+    client.destroy();
+  }
+}
+
 async function sendWithAccount(account, args) {
   if (account.authMode === "oauth") return sendWithOAuth(account, args);
+  if (account.provider === "ses") return sendWithSes(account, args);
   return sendThreaded({ ...args, smtp: smtpFor(account) });
 }
 
@@ -510,12 +672,18 @@ async function readSenderState() {
     for (const count of Object.values(value.counts)) {
       if (!Number.isInteger(count) || count < 0) throw new Error("invalid sender counter in shared state");
     }
+    if (value.last_attempts !== undefined && (typeof value.last_attempts !== "object" || Array.isArray(value.last_attempts))) {
+      throw new Error("invalid sender attempt timestamps in shared state");
+    }
+    for (const timestamp of Object.values(value.last_attempts || {})) {
+      if (!Number.isFinite(Number(timestamp)) || Number(timestamp) < 0) throw new Error("invalid sender attempt timestamp");
+    }
     const date = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-    return value.date === date ? value : { date, counts: {} };
+    return value.date === date ? { ...value, last_attempts: value.last_attempts || {} } : { date, counts: {}, last_attempts: {} };
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
     const date = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-    return { date, counts: {} };
+    return { date, counts: {}, last_attempts: {} };
   }
 }
 
@@ -525,11 +693,18 @@ async function writeSenderState(value) {
 }
 
 async function reserveSender(account) {
-  const state = await readSenderState();
+  let state = await readSenderState();
+  const minimumInterval = deliveryPolicyFor(account.accountType, account.provider).minIntervalMs;
+  const previousAttempt = Number(state.last_attempts?.[account.email] || 0);
+  const waitMs = Math.max(0, previousAttempt + minimumInterval - Date.now());
+  if (waitMs > 0) await sleep(waitMs);
+  state = await readSenderState();
   const count = Number(state.counts[account.email] || 0);
   if (!Number.isInteger(count) || count < 0) throw new Error("invalid sender counter");
   if (count >= account.dailyCap) throw new Error(`daily sender cap reached for ${account.email}`);
   state.counts[account.email] = count + 1;
+  state.last_attempts ||= {};
+  state.last_attempts[account.email] = Date.now();
   await writeSenderState(state);
 }
 
@@ -850,10 +1025,14 @@ async function executeJob(job) {
             job.error = "邮件结果无法可靠落盘；已按投递未知处理并停止全部后续发送";
             job.pauseRequested = true;
           }
-          if (["EAUTH", "OAUTH_AUTH"].includes(delivery.errorCode) && job.status !== "delivery_unknown") {
+          if (["EAUTH", "OAUTH_AUTH", "SES_AUTH", "SES_THROTTLE", "SES_ACCOUNT"].includes(delivery.errorCode) && job.status !== "delivery_unknown") {
             account.verified = false;
             job.status = "paused";
-            job.error = "发件账号认证失败；已暂停后续发送";
+            job.error = delivery.errorCode === "SES_THROTTLE"
+              ? "Amazon SES 额度或速率受限；已暂停后续发送"
+              : delivery.errorCode === "SES_ACCOUNT"
+                ? "Amazon SES 账户、沙盒或发件身份状态阻止发送；已暂停后续发送"
+              : "发件账号认证失败；已暂停后续发送";
             job.pauseRequested = true;
           }
         }
@@ -986,7 +1165,10 @@ async function route(req, res) {
     });
   }
   if (req.method === "POST" && url.pathname === "/senders") {
-    const account = validateSenderInput(await bodyJson(req));
+    const input = await bodyJson(req);
+    const account = String(input.provider || "custom").toLowerCase() === "ses"
+      ? validateSesSenderInput(input)
+      : validateSenderInput(input);
     accounts.set(accountKey(account.ownerKey, account.id), account);
     return json(res, 201, { ok: true, sender: publicAccount(account) });
   }
@@ -996,7 +1178,9 @@ async function route(req, res) {
     const account = accounts.get(accountKey(ownerKey, decodeURIComponent(verifyMatch[1])));
     if (!account) return json(res, 404, { ok: false, error: "sender not configured in this gateway session" });
     try {
-      if (account.authMode === "oauth") {
+      if (account.provider === "ses") {
+        await verifySesAccount(account);
+      } else if (account.authMode === "oauth") {
         const config = oauthConfig(account.provider);
         const token = await ensureOAuthAccessToken(account);
         const profile = await fetchOauthProfile(config, token);

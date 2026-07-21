@@ -9,9 +9,10 @@ LOOP Creator OS MVP（Windows 快速使用说明）
 
 二、首次初始化
 1. 选择“纯模板”或“AI 个性化开场”；
-2. 添加并测试至少一个 Gmail、Outlook 或 SMTP 发件邮箱；
-3. 只有 AI 个性化模式才需要模型 API Key；
-4. 初始化不会发送邮件，真实发送必须经过逐封审批和第二次 LIVE 确认。
+2. 添加并测试至少一个 Amazon SES API、Gmail、Outlook 或 SMTP 发件身份；
+3. 设置人工 Reply-To 邮箱，达人回复后由团队在邮箱中继续沟通；
+4. 只有 AI 个性化模式才需要模型 API Key；
+5. 初始化和连接测试不会发送邮件，真实发送必须经过逐封审批和第二次 LIVE 确认。
 
 三、关闭
 右键 Windows 右下角 LOOP 托盘图标，选择“退出并停止服务”。只关闭浏览器不会停止后台服务。
@@ -25,7 +26,8 @@ LOOP Creator OS MVP（Windows 快速使用说明）
 五、安全提示
 - 请先使用 1–3 个团队内部邮箱完成测试；
 - 出现 delivery_unknown 时不要重发，应先检查 Sent 文件夹；
-- OAuth Token、SMTP 密码和 API Key 只保存在当前进程内存中，重启后需要重新输入；
+- AWS 凭据、OAuth Token、SMTP 密码和 AI API Key 只保存在当前进程内存中，重启后需要重新输入；
+- 当前 MVP 只负责首次建联，回复与后续沟通由人工处理；
 - 当前 EXE 未做商业代码签名，Windows 可能显示 SmartScreen 提示；正式分发前应使用公司的代码签名证书签名。
 
 完整中文手册：仓库根目录 README.zh-CN.md

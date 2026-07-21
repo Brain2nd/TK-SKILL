@@ -3,9 +3,12 @@ import { createHash } from "node:crypto";
 import test from "node:test";
 import {
   createOAuthAuthorization,
+  deliveryPolicyFor,
+  publicAccount,
   validateExecutionPayload,
   validateOAuthSenderInput,
   validatePersonalizationRequest,
+  validateSesSenderInput,
   validateSenderInput,
 } from "../server/outreach-gateway.mjs";
 import { canonicalBatchSnapshot, canonicalItemPayload } from "../lib/outreach-contract.mjs";
@@ -59,9 +62,31 @@ test("sender credentials are validated and remain a write-only input", () => {
   const sender = validateSenderInput(input);
   assert.equal(sender.email, "vira@example.com");
   assert.equal(sender.dailyCap, 25);
+  assert.equal(sender.accountType, "personal");
+  assert.equal(publicAccount(sender).safety_policy.min_interval_seconds, 30);
   assert.equal(sender.verified, false);
   assert.throws(() => validateSenderInput({ ...input, from_email: "bad", password: "x" }), /invalid sender email/);
   assert.throws(() => validateSenderInput({ ...input, from_name: "Bad\nBcc", password: "x" }), /invalid sender name/);
+});
+
+test("company and personal sender routes enforce different server-side safety ceilings", () => {
+  assert.deepEqual(deliveryPolicyFor("personal", "gmail"), {
+    accountType: "personal", maxDailyCap: 100, minIntervalMs: 30000,
+  });
+  assert.deepEqual(deliveryPolicyFor("company", "gmail"), {
+    accountType: "company", maxDailyCap: 500, minIntervalMs: 10000,
+  });
+  assert.deepEqual(deliveryPolicyFor("company", "ses"), {
+    accountType: "company", maxDailyCap: 5000, minIntervalMs: 2000,
+  });
+  const base = {
+    id: "sender_cap", owner_key: TENANT, label: "Pool", from_name: "Vira",
+    from_email: "vira@example.com", smtp_host: "smtp.example.com", smtp_port: 465,
+    password: "app-password",
+  };
+  assert.throws(() => validateSenderInput({ ...base, account_type: "personal", daily_cap: 101 }), /between 1 and 100/);
+  assert.equal(validateSenderInput({ ...base, account_type: "company", daily_cap: 500 }).dailyCap, 500);
+  assert.throws(() => deliveryPolicyFor("personal", "ses"), /company\/domain/);
 });
 
 test("OAuth senders need only an address plus a provider authorization", () => {
@@ -97,6 +122,33 @@ test("OAuth senders need only an address plus a provider authorization", () => {
     if (previousRedirect === undefined) delete process.env.LOOP_OAUTH_REDIRECT_URI;
     else process.env.LOOP_OAUTH_REDIRECT_URI = previousRedirect;
   }
+});
+
+test("Amazon SES sender configuration keeps API credentials in the local gateway", () => {
+  const input = {
+    id: "sender_ses",
+    owner_key: TENANT,
+    provider: "ses",
+    label: "SES Europe",
+    from_name: "Vira",
+    from_email: "VIRA@outreach.example.com",
+    reply_to_email: "team@example.com",
+    aws_region: "eu-west-1",
+    access_key_id: "AKIA1234567890ABCDEF",
+    secret_access_key: "a".repeat(40),
+    daily_cap: 5000,
+  };
+  const sender = validateSesSenderInput(input);
+  assert.equal(sender.provider, "ses");
+  assert.equal(sender.accountType, "company");
+  assert.equal(sender.authMode, "api");
+  assert.equal(sender.email, "vira@outreach.example.com");
+  assert.equal(sender.smtpHost, "email.eu-west-1.amazonaws.com");
+  assert.equal(sender.dailyCap, 5000);
+  const publicSender = JSON.stringify(publicAccount(sender));
+  assert.doesNotMatch(publicSender, /AKIA1234567890ABCDEF/);
+  assert.doesNotMatch(publicSender, /a{40}/);
+  assert.throws(() => validateSesSenderInput({ ...input, aws_region: "Europe" }), /AWS region/);
 });
 
 test("AI personalization rejects recipients without public content evidence", () => {

@@ -141,7 +141,8 @@ export async function POST(request: Request) {
       if (!storedSender) throw new Error("发件账户不存在或无权访问");
       const result = await gateway(`/senders/${encodeURIComponent(senderId)}/verify?owner_key=${tenantKey}`, { method: "POST", body: "{}" }, 30000);
       if (result.sender.from_email !== storedSender.from_email || result.sender.from_name !== storedSender.from_name ||
-        (result.sender.reply_to_email || "") !== (storedSender.reply_to_email || "")) {
+        (result.sender.reply_to_email || "") !== (storedSender.reply_to_email || "") ||
+        (result.sender.account_type || "personal") !== (storedSender.account_type || "personal")) {
         throw new Error("本地网关发件身份与项目数据库不一致，请重新保存账户配置");
       }
       await setSenderVerification(owner, senderId, "verified");

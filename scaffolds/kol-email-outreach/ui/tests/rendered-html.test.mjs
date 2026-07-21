@@ -43,6 +43,10 @@ test("project UI delegates persistence and sending to server routes", async () =
   assert.match(page, /正式入队发送/);
   assert.match(page, /应用密码.*只写/s);
   assert.match(page, /AI 个性化配置/);
+  assert.match(page, /个人邮箱池/);
+  assert.match(page, /企业客户邮箱/);
+  assert.match(page, /全局停止联系/);
+  assert.match(page, /追踪默认关闭/);
   assert.match(page, /AI 生成.*封审批邮件/);
   assert.match(page, /纯模板（不调用 AI）/);
   assert.match(page, /首次使用初始化/);
@@ -66,6 +70,8 @@ test("project UI delegates persistence and sending to server routes", async () =
   assert.match(gateway, /jobs\.get\(parsed\.runId\)/);
   assert.match(schema, /sendBatchItems/);
   assert.match(schema, /personalizationMode: text\("personalization_mode"\)/);
+  assert.match(schema, /accountType: text\("account_type"\)/);
+  assert.match(schema, /emailSuppressions/);
   assert.doesNotMatch(schema, /password|appPassword|smtpPassword/i);
 });
 

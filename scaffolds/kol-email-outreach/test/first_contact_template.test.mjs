@@ -21,6 +21,8 @@ Here is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/
 
 Would you be interested in collaborating with us?
 
+If you'd prefer not to hear from us again, just reply No and we won't contact you again.
+
 Vira`;
 
 test("an empty hook reproduces the client's original body exactly", async () => {
@@ -40,6 +42,7 @@ test("a creator hook cannot change the locked offer or subject", async () => {
   assert.match(rendered.body, /beauty-focused UGC/);
   assert.match(rendered.body, /You will receive €20 for the post\./);
   assert.match(rendered.body, /Here is a sample video for reference: https:\/\/vm\.tiktok\.com\/ZNRoT8PuT\//);
+  assert.match(rendered.body, /reply No and we won't contact you again/);
   assert.match(rendered.body, /only need to post it on your TikTok account and add the TikTok Shop product link/);
   assert.equal(rendered.subject, "Paid TikTok Shop short-form video opportunity");
 });

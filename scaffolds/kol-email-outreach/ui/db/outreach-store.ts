@@ -3,6 +3,7 @@ import demoData from "../app/demo-data.json";
 import { canonicalBatchSnapshot, canonicalItemPayload } from "../lib/outreach-contract.mjs";
 
 const DEFAULT_SUBJECT = "Paid TikTok Shop short-form video opportunity";
+const SYSTEM_OPT_OUT = "If you'd prefer not to hear from us again, just reply No and we won't contact you again.";
 const LEGACY_DEFAULT_BODY = `Hi!
 
 {{personalized_hook}}
@@ -14,9 +15,13 @@ We will provide the video for you, and you only need to post it on your TikTok a
 Would you be interested in collaborating with us?
 
 {{sender_name}}`;
-const DEFAULT_BODY = LEGACY_DEFAULT_BODY.replace(
+const PRE_OPTOUT_DEFAULT_BODY = LEGACY_DEFAULT_BODY.replace(
   "\n\nWould you be interested in collaborating with us?",
   "\n\nHere is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/\n\nWould you be interested in collaborating with us?",
+);
+const DEFAULT_BODY = PRE_OPTOUT_DEFAULT_BODY.replace(
+  "\n\n{{sender_name}}",
+  `\n\n${SYSTEM_OPT_OUT}\n\n{{sender_name}}`,
 );
 
 function database() {
@@ -66,6 +71,9 @@ function assertTemplate(subject: unknown, body: unknown, requirePersonalization 
   }
   if ((cleanBody.match(/\{\{sender_name\}\}/g) || []).length !== 1) {
     throw new Error("正文必须且只能包含一个 {{sender_name}} 签名");
+  }
+  if (cleanBody.split(/\n\n/).filter((paragraph) => paragraph.trim() === SYSTEM_OPT_OUT).length !== 1) {
+    throw new Error(`正文必须保留系统退出语：${SYSTEM_OPT_OUT}`);
   }
   const placeholders = [...`${cleanSubject}\n${cleanBody}`.matchAll(/\{\{([a-z0-9_]+)\}\}/gi)].map((match) => match[1]);
   const unknown = [...new Set(placeholders.filter((name) => !["personalized_hook", "sender_name", "brand_name"].includes(name)))];
@@ -125,11 +133,17 @@ async function ensureSchema() {
       id TEXT PRIMARY KEY, owner_email TEXT NOT NULL, label TEXT NOT NULL, from_name TEXT NOT NULL,
       from_email TEXT NOT NULL, reply_to_email TEXT NOT NULL DEFAULT '', smtp_host TEXT NOT NULL,
       smtp_port INTEGER NOT NULL, secure INTEGER NOT NULL DEFAULT 1,
-      provider TEXT NOT NULL DEFAULT 'custom', auth_mode TEXT NOT NULL DEFAULT 'smtp', daily_cap INTEGER NOT NULL DEFAULT 50,
+      provider TEXT NOT NULL DEFAULT 'custom', account_type TEXT NOT NULL DEFAULT 'personal', auth_mode TEXT NOT NULL DEFAULT 'smtp', daily_cap INTEGER NOT NULL DEFAULT 50,
       verification_status TEXT NOT NULL DEFAULT 'configured', is_enabled INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
     `CREATE UNIQUE INDEX IF NOT EXISTS sender_owner_email_uq ON sender_accounts(owner_email, from_email)`,
+    `CREATE TABLE IF NOT EXISTS email_suppressions (
+      id TEXT PRIMARY KEY, owner_email TEXT NOT NULL, email TEXT NOT NULL, reason TEXT NOT NULL,
+      source TEXT NOT NULL DEFAULT 'manual', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS email_suppressions_owner_email_uq ON email_suppressions(owner_email, email)`,
     `CREATE TABLE IF NOT EXISTS project_recipients (
       id TEXT PRIMARY KEY, project_id TEXT NOT NULL, creator_id TEXT NOT NULL, sender_override_id TEXT NOT NULL DEFAULT '',
       personalized_hook TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'selected', position INTEGER NOT NULL DEFAULT 0,
@@ -186,6 +200,10 @@ async function ensureSchema() {
   if (!(senderColumns.results || []).some((column: any) => column.name === "auth_mode")) {
     await db.prepare("ALTER TABLE sender_accounts ADD COLUMN auth_mode TEXT NOT NULL DEFAULT 'smtp'").run();
   }
+  if (!(senderColumns.results || []).some((column: any) => column.name === "account_type")) {
+    await db.prepare("ALTER TABLE sender_accounts ADD COLUMN account_type TEXT NOT NULL DEFAULT 'personal'").run();
+  }
+  await db.prepare("UPDATE sender_accounts SET account_type = 'company' WHERE provider = 'ses' AND account_type != 'company'").run();
   const creatorColumns = await db.prepare("PRAGMA table_info(creators)").all();
   if (!(creatorColumns.results || []).some((column: any) => column.name === "evidence_json")) {
     await db.prepare("ALTER TABLE creators ADD COLUMN evidence_json TEXT NOT NULL DEFAULT '[]'").run();
@@ -254,8 +272,8 @@ async function seedDemo(ownerEmail: string) {
     await audit(ownerEmail, projectId, "project", projectId, "project.seeded", { recipients: recipientStatements.length });
   } else {
     await db.prepare(
-      "UPDATE projects SET body_template = ?, updated_at = ? WHERE id = ? AND status = 'draft' AND body_template = ?",
-    ).bind(DEFAULT_BODY, now(), String((existing as any).id), LEGACY_DEFAULT_BODY).run();
+      "UPDATE projects SET body_template = ?, updated_at = ? WHERE id = ? AND status = 'draft' AND body_template IN (?, ?)",
+    ).bind(DEFAULT_BODY, now(), String((existing as any).id), LEGACY_DEFAULT_BODY, PRE_OPTOUT_DEFAULT_BODY).run();
   }
 }
 
@@ -303,14 +321,17 @@ export async function workspaceSnapshot(ownerEmail: string, projectId = "") {
   ).bind(ownerEmail).all();
   const projects = (projectRows.results || []).map(mapProject);
   const selectedProjectId = projectId && projects.some((project: any) => project.id === projectId) ? projectId : projects[0]?.id || "";
-  const [creatorRows, senderRows, recipientRows, batchRows, itemRows, auditRows] = await Promise.all([
-    db.prepare("SELECT * FROM creators ORDER BY avg_views DESC, followers DESC").all(),
+  const [creatorRows, senderRows, recipientRows, batchRows, itemRows, auditRows, suppressionRows] = await Promise.all([
+    db.prepare(`SELECT c.*,
+      EXISTS(SELECT 1 FROM email_suppressions es WHERE es.owner_email = ? AND es.email = LOWER(c.contact_email)) AS suppressed
+      FROM creators c ORDER BY c.avg_views DESC, c.followers DESC`).bind(ownerEmail).all(),
     db.prepare("SELECT * FROM sender_accounts WHERE owner_email = ? ORDER BY created_at DESC").bind(ownerEmail).all(),
     selectedProjectId
       ? db.prepare(`SELECT pr.*, c.handle, c.display_name, c.profile_url, c.contact_email, c.country, c.city,
-          c.followers, c.avg_views, c.engagement_rate, c.traits_json, c.review_warnings_json, c.bio
+          c.followers, c.avg_views, c.engagement_rate, c.traits_json, c.review_warnings_json, c.bio,
+          EXISTS(SELECT 1 FROM email_suppressions es WHERE es.owner_email = ? AND es.email = LOWER(c.contact_email)) AS suppressed
         FROM project_recipients pr JOIN creators c ON c.id = pr.creator_id
-        WHERE pr.project_id = ? ORDER BY pr.position`).bind(selectedProjectId).all()
+        WHERE pr.project_id = ? ORDER BY pr.position`).bind(ownerEmail, selectedProjectId).all()
       : Promise.resolve({ results: [] }),
     selectedProjectId
       ? db.prepare("SELECT * FROM send_batches WHERE project_id = ? ORDER BY created_at DESC").bind(selectedProjectId).all()
@@ -319,6 +340,7 @@ export async function workspaceSnapshot(ownerEmail: string, projectId = "") {
       ? db.prepare("SELECT * FROM send_batch_items WHERE project_id = ? ORDER BY position, handle").bind(selectedProjectId).all()
       : Promise.resolve({ results: [] }),
     db.prepare("SELECT * FROM audit_events WHERE owner_email = ? ORDER BY created_at DESC LIMIT 50").bind(ownerEmail).all(),
+    db.prepare("SELECT * FROM email_suppressions WHERE owner_email = ? ORDER BY updated_at DESC").bind(ownerEmail).all(),
   ]);
 
   return {
@@ -349,6 +371,7 @@ export async function workspaceSnapshot(ownerEmail: string, projectId = "") {
     })),
     batch_items: (itemRows.results || []).map((row: any) => ({ ...row, review_warnings: parseJson(row.review_warnings_json) })),
     audit_events: (auditRows.results || []).map((row: any) => ({ ...row, details: parseJson(row.details_json, {}) })),
+    suppressions: suppressionRows.results || [],
   };
 }
 
@@ -373,6 +396,19 @@ async function assertProjectEditable(projectId: string) {
   if (active) throw new Error("项目已有正式发送记录，不能修改首次建联内容");
 }
 
+async function assertCreatorsNotSuppressed(ownerEmail: string, creatorIds: string[]) {
+  if (!creatorIds.length) return;
+  const rows = await database().prepare(
+    `SELECT c.handle, c.contact_email FROM creators c
+     JOIN email_suppressions es ON es.owner_email = ? AND es.email = LOWER(c.contact_email)
+     WHERE c.id IN (${creatorIds.map(() => "?").join(",")})`,
+  ).bind(ownerEmail, ...creatorIds).all();
+  if ((rows.results || []).length) {
+    const handles = (rows.results || []).slice(0, 3).map((row: any) => `@${row.handle}`).join("、");
+    throw new Error(`${handles} 已进入全局停止联系名单，不能加入发送项目`);
+  }
+}
+
 async function invalidateDraftBatches(projectId: string) {
   const db = database();
   const batches = await db.prepare("SELECT id FROM send_batches WHERE project_id = ? AND status IN ('pending','approved')").bind(projectId).all();
@@ -394,6 +430,7 @@ export async function createProject(ownerEmail: string, input: any) {
   const template = assertTemplate(input.subject_template || DEFAULT_SUBJECT, input.body_template || DEFAULT_BODY, personalizationMode === "ai");
   const creatorIds: string[] = [...new Set<string>((Array.isArray(input.creator_ids) ? input.creator_ids : []).map((value: unknown) => String(value)))];
   if (!creatorIds.length) throw new Error("至少选择一位达人");
+  await assertCreatorsNotSuppressed(ownerEmail, creatorIds);
   const targetCount = Math.min(500, Math.max(1, Number(input.target_count || creatorIds.length)));
   if (creatorIds.length !== targetCount) throw new Error("已选达人数必须等于目标发送数量");
   const defaultSenderId = String(input.default_sender_id || "");
@@ -450,6 +487,7 @@ export async function setProjectRecipients(ownerEmail: string, input: any) {
   await assertProjectEditable(project.id);
   const creatorIds: string[] = [...new Set<string>((Array.isArray(input.creator_ids) ? input.creator_ids : []).map((value: unknown) => String(value)))];
   if (!creatorIds.length) throw new Error("至少选择一位达人");
+  await assertCreatorsNotSuppressed(ownerEmail, creatorIds);
   await invalidateDraftBatches(project.id);
   const db = database();
   const selected = await db.prepare(`SELECT id, default_hook FROM creators WHERE id IN (${creatorIds.map(() => "?").join(",")})`).bind(...creatorIds).all();
@@ -538,6 +576,7 @@ export async function addProjectRecipients(ownerEmail: string, projectId: string
   await assertProjectEditable(project.id);
   const creatorIds = [...new Set((creatorIdsInput || []).map(String))];
   if (!creatorIds.length) return 0;
+  await assertCreatorsNotSuppressed(ownerEmail, creatorIds);
   await invalidateDraftBatches(project.id);
   const db = database();
   const selected = await db.prepare(`SELECT id, default_hook FROM creators WHERE id IN (${creatorIds.map(() => "?").join(",")})`).bind(...creatorIds).all();
@@ -580,30 +619,33 @@ export async function upsertSender(ownerEmail: string, input: any) {
   const replyTo = input.reply_to_email ? normalizeEmail(input.reply_to_email) : "";
   if (!fromEmail || (input.reply_to_email && !replyTo)) throw new Error("发件邮箱或 Reply-To 无效");
   const senderId = String(input.id || id("sender"));
+  const accountType = String(input.account_type || "personal").trim().toLowerCase();
+  if (!["company", "personal"].includes(accountType)) throw new Error("邮箱类型必须是企业或个人");
   const db = database();
   const existingOwner = await db.prepare("SELECT * FROM sender_accounts WHERE id = ?").bind(senderId).first<any>();
   if (existingOwner && existingOwner.owner_email !== ownerEmail) throw new Error("发件账户 ID 已属于其他用户");
   await db.prepare(
     `INSERT INTO sender_accounts (
       id, owner_email, label, from_name, from_email, reply_to_email, smtp_host, smtp_port, secure,
-      provider, auth_mode, daily_cap, verification_status, is_enabled, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+      provider, account_type, auth_mode, daily_cap, verification_status, is_enabled, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
     ON CONFLICT(id) DO UPDATE SET label = excluded.label, from_name = excluded.from_name,
       from_email = excluded.from_email, reply_to_email = excluded.reply_to_email, smtp_host = excluded.smtp_host,
-      smtp_port = excluded.smtp_port, secure = excluded.secure, provider = excluded.provider,
+      smtp_port = excluded.smtp_port, secure = excluded.secure, provider = excluded.provider, account_type = excluded.account_type,
       auth_mode = excluded.auth_mode, daily_cap = excluded.daily_cap,
       verification_status = excluded.verification_status, is_enabled = 1, updated_at = excluded.updated_at`,
   ).bind(
     senderId, ownerEmail, String(input.label || input.from_name || fromEmail).trim().slice(0, 80),
     String(input.from_name || "Partnerships").trim().slice(0, 80), fromEmail, replyTo,
     String(input.smtp_host || "").trim().toLowerCase().slice(0, 255), Number(input.smtp_port || 465),
-    input.secure === false ? 0 : 1, String(input.provider || "custom").trim().toLowerCase(),
-    String(input.auth_mode || "smtp").trim().toLowerCase(), Math.min(500, Math.max(1, Number(input.daily_cap || 50))),
+    input.secure === false ? 0 : 1, String(input.provider || "custom").trim().toLowerCase(), accountType,
+    String(input.auth_mode || "smtp").trim().toLowerCase(), Math.min(5000, Math.max(1, Number(input.daily_cap || 50))),
     String(input.verification_status || "configured"), now(), now(),
   ).run();
   const identityChanged = existingOwner && (
     existingOwner.from_name !== String(input.from_name || "Partnerships").trim().slice(0, 80) ||
-    existingOwner.from_email !== fromEmail || (existingOwner.reply_to_email || "") !== replyTo
+    existingOwner.from_email !== fromEmail || (existingOwner.reply_to_email || "") !== replyTo ||
+    String(existingOwner.account_type || "personal") !== accountType
   );
   if (identityChanged) {
     const affected = await db.prepare(
@@ -619,6 +661,33 @@ export async function upsertSender(ownerEmail: string, input: any) {
   }
   await audit(ownerEmail, "", "sender", senderId, "sender.configured", { from_email: fromEmail });
   return senderId;
+}
+
+export async function suppressRecipient(ownerEmail: string, input: any) {
+  await initializeWorkspace(ownerEmail);
+  const email = normalizeEmail(input.email);
+  if (!email) throw new Error("拒绝联系邮箱无效");
+  const allowedReasons = new Set(["declined", "unsubscribe", "complaint", "bounce", "manual"]);
+  const reason = String(input.reason || "manual").trim().toLowerCase();
+  if (!allowedReasons.has(reason)) throw new Error("拒绝联系原因无效");
+  const db = database();
+  await db.prepare(
+    `INSERT INTO email_suppressions (id, owner_email, email, reason, source, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'manual', ?, ?)
+     ON CONFLICT(owner_email, email) DO UPDATE SET reason = excluded.reason, source = excluded.source, updated_at = excluded.updated_at`,
+  ).bind(id("sup"), ownerEmail, email, reason, now(), now()).run();
+  const projects = await db.prepare(
+    `SELECT DISTINCT p.id FROM projects p
+     JOIN project_recipients pr ON pr.project_id = p.id
+     JOIN creators c ON c.id = pr.creator_id
+     WHERE p.owner_email = ? AND LOWER(c.contact_email) = ?`,
+  ).bind(ownerEmail, email).all();
+  for (const row of projects.results || []) {
+    const projectId = String((row as any).id);
+    await invalidateDraftBatches(projectId);
+    await db.prepare("UPDATE projects SET status = CASE WHEN status IN ('pending_approval','approved') THEN 'draft' ELSE status END, updated_at = ? WHERE id = ?").bind(now(), projectId).run();
+    await audit(ownerEmail, projectId, "recipient", email, "recipient.suppressed", { reason });
+  }
 }
 
 export async function setSenderVerification(ownerEmail: string, senderId: string, status: string) {
@@ -638,6 +707,7 @@ async function personalizationStateForProject(ownerEmail: string, projectId: str
       c.city, c.country, c.followers, c.avg_views, c.engagement_rate, c.default_hook,
       COALESCE(NULLIF(pr.sender_override_id, ''), p.default_sender_id) AS resolved_sender_id,
       s.from_name, s.from_email, s.reply_to_email, s.verification_status, s.is_enabled
+      , EXISTS(SELECT 1 FROM email_suppressions es WHERE es.owner_email = p.owner_email AND es.email = LOWER(c.contact_email)) AS suppressed
      FROM project_recipients pr
      JOIN projects p ON p.id = pr.project_id
      JOIN creators c ON c.id = pr.creator_id
@@ -652,6 +722,7 @@ async function personalizationStateForProject(ownerEmail: string, projectId: str
   for (const row of recipients as any[]) {
     if (!row.resolved_sender_id || !row.from_email) throw new Error(`@${row.handle} 尚未分配发件邮箱`);
     if (row.verification_status !== "verified" || !row.is_enabled) throw new Error(`${row.from_email} 尚未通过连接验证`);
+    if (row.suppressed) throw new Error(`@${row.handle} 已进入全局停止联系名单，请先从项目移除`);
     const to = normalizeEmail(row.contact_email);
     if (!to) throw new Error(`@${row.handle} 的收件邮箱无效`);
     if (recipientEndpoints.has(to)) throw new Error(`收件邮箱 ${to} 在项目中重复，已阻止生成审批批次`);

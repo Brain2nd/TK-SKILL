@@ -59,6 +59,7 @@ export const senderAccounts = sqliteTable("sender_accounts", {
   smtpPort: integer("smtp_port").notNull(),
   secure: integer("secure", { mode: "boolean" }).notNull().default(true),
   provider: text("provider").notNull().default("custom"),
+  accountType: text("account_type").notNull().default("personal"),
   authMode: text("auth_mode").notNull().default("smtp"),
   dailyCap: integer("daily_cap").notNull().default(50),
   verificationStatus: text("verification_status").notNull().default("configured"),
@@ -67,6 +68,18 @@ export const senderAccounts = sqliteTable("sender_accounts", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   uniqueIndex("sender_owner_email_uq").on(table.ownerEmail, table.fromEmail),
+]);
+
+export const emailSuppressions = sqliteTable("email_suppressions", {
+  id: text("id").primaryKey(),
+  ownerEmail: text("owner_email").notNull(),
+  email: text("email").notNull(),
+  reason: text("reason").notNull(),
+  source: text("source").notNull().default("manual"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  uniqueIndex("email_suppressions_owner_email_uq").on(table.ownerEmail, table.email),
 ]);
 
 export const projectRecipients = sqliteTable("project_recipients", {

@@ -18,13 +18,15 @@ Here is a sample video for reference: https://vm.tiktok.com/ZNRoT8PuT/
 
 Would you be interested in collaborating with us?
 
+If you'd prefer not to hear from us again, just reply No and we won't contact you again.
+
 {{sender_name}}`;
 
 const navItems: { id: View; label: string; icon: string }[] = [
   { id: "projects", label: "项目中心", icon: "⌁" },
   { id: "approvals", label: "审批与发送", icon: "✓" },
-  { id: "replies", label: "回复与报价", icon: "↳" },
-  { id: "senders", label: "邮箱账户", icon: "@" },
+  { id: "replies", label: "发送结果", icon: "↳" },
+  { id: "senders", label: "投递与邮箱", icon: "@" },
   { id: "safety", label: "安全与审计", icon: "◇" },
 ];
 
@@ -104,25 +106,27 @@ function ProjectCard({ project, active, select }: { project: any; active: boolea
 }
 
 function CreateProjectModal({ workspace, close, submit, busy }: any) {
+  const eligibleCreators = workspace.creators.filter((creator: any) => !Boolean(creator.suppressed));
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [market, setMarket] = useState("ES");
   const [offer, setOffer] = useState(20);
   const [currency, setCurrency] = useState("EUR");
-  const [count, setCount] = useState(Math.min(10, workspace.creators.length));
+  const [count, setCount] = useState(Math.min(10, eligibleCreators.length));
   const [senderId, setSenderId] = useState(workspace.senders.find((sender: any) => sender.verification_status === "verified")?.id || "");
   const [personalizationMode, setPersonalizationMode] = useState("template");
   const [subject, setSubject] = useState(DEFAULT_SUBJECT);
   const [body, setBody] = useState(DEFAULT_BODY);
-  const [selected, setSelected] = useState<string[]>(workspace.creators.slice(0, count).map((creator: any) => creator.id));
+  const [selected, setSelected] = useState<string[]>(eligibleCreators.slice(0, count).map((creator: any) => creator.id));
 
   function selectTop(nextCount = count) {
-    const safeCount = Math.max(1, Math.min(workspace.creators.length, Number(nextCount || 1)));
+    const safeCount = eligibleCreators.length ? Math.max(1, Math.min(eligibleCreators.length, Number(nextCount || 1))) : 0;
     setCount(safeCount);
-    setSelected(workspace.creators.slice(0, safeCount).map((creator: any) => creator.id));
+    setSelected(eligibleCreators.slice(0, safeCount).map((creator: any) => creator.id));
   }
 
   function toggleCreator(creatorId: string) {
+    if (workspace.creators.find((creator: any) => creator.id === creatorId)?.suppressed) return;
     setSelected((current) => current.includes(creatorId) ? current.filter((id) => id !== creatorId) : [...current, creatorId]);
   }
 
@@ -147,9 +151,9 @@ function CreateProjectModal({ workspace, close, submit, busy }: any) {
           <label><span>邮件生成方式</span><select value={personalizationMode} onChange={(e) => setPersonalizationMode(e.target.value)}><option value="template">纯模板（不调用 AI）</option><option value="ai">AI 个性化开场</option></select></label>
         </div>
 
-        <div className="wizard-step"><span>02</span><div><h3>达人和发送数量</h3><p>明确这个项目给谁发、总共发几封。</p></div><div className="step-action"><input className="count-input" type="number" min="1" max={workspace.creators.length} value={count} onChange={(e) => selectTop(Number(e.target.value))}/><button type="button" className="secondary-button" onClick={() => selectTop()}>按均播选 Top {count}</button></div></div>
+        <div className="wizard-step"><span>02</span><div><h3>达人和发送数量</h3><p>明确这个项目给谁发；停止联系名单中的达人不可选择。</p></div><div className="step-action"><input className="count-input" type="number" min="1" max={eligibleCreators.length} value={count} onChange={(e) => selectTop(Number(e.target.value))}/><button type="button" className="secondary-button" onClick={() => selectTop()}>按均播选 Top {count}</button></div></div>
         <div className="creator-picker">
-          {workspace.creators.map((creator: any) => <label className={selected.includes(creator.id) ? "selected" : ""} key={creator.id}><input type="checkbox" checked={selected.includes(creator.id)} onChange={() => toggleCreator(creator.id)} /><Avatar name={creator.handle}/><span><b>@{creator.handle}</b><small>{formatNumber(creator.followers)} 粉丝 · {formatNumber(creator.avg_views)} 均播</small></span></label>)}
+          {workspace.creators.map((creator: any) => <label className={selected.includes(creator.id) ? "selected" : ""} key={creator.id}><input type="checkbox" disabled={Boolean(creator.suppressed)} checked={selected.includes(creator.id)} onChange={() => toggleCreator(creator.id)} /><Avatar name={creator.handle}/><span><b>@{creator.handle}</b><small>{creator.suppressed ? "已进入全局停止联系名单" : `${formatNumber(creator.followers)} 粉丝 · ${formatNumber(creator.avg_views)} 均播`}</small></span></label>)}
         </div>
         <div className={`selection-count ${selected.length === count ? "ok" : "bad"}`}>已选 {selected.length} / 目标 {count} 位达人</div>
 
@@ -157,9 +161,9 @@ function CreateProjectModal({ workspace, close, submit, busy }: any) {
         <div className="form-stack">
           <label><span>主题</span><input required value={subject} onChange={(e) => setSubject(e.target.value)} lang="en" /></label>
           <label><span>正文</span><textarea required rows={12} value={body} onChange={(e) => setBody(e.target.value)} lang="en" /></label>
-          <small>{personalizationMode === "ai" ? <>必须保留 <code>{"{{personalized_hook}}"}</code> 和 <code>{"{{sender_name}}"}</code>。</> : <><code>{"{{personalized_hook}}"}</code> 可删除或保留；纯模板发送时该段会被移除。必须保留 <code>{"{{sender_name}}"}</code>。</>}商业条款由模板正文控制。</small>
+          <small>{personalizationMode === "ai" ? <>必须保留 <code>{"{{personalized_hook}}"}</code> 和 <code>{"{{sender_name}}"}</code>。</> : <><code>{"{{personalized_hook}}"}</code> 可删除或保留；纯模板发送时该段会被移除。必须保留 <code>{"{{sender_name}}"}</code>。</>}系统退出语也必须保留，商业条款由模板正文控制。</small>
         </div>
-        <footer className="modal-actions"><button type="button" className="secondary-button" onClick={close}>取消</button><button className="primary-button" disabled={busy || selected.length !== count}>{busy ? "正在创建…" : `创建项目并分配 ${selected.length} 位达人`}</button></footer>
+        <footer className="modal-actions"><button type="button" className="secondary-button" onClick={close}>取消</button><button className="primary-button" disabled={busy || !selected.length || selected.length !== count}>{busy ? "正在创建…" : `创建项目并分配 ${selected.length} 位达人`}</button></footer>
       </form>
     </Modal>
   );
@@ -168,11 +172,18 @@ function CreateProjectModal({ workspace, close, submit, busy }: any) {
 function RecipientModal({ workspace, project, close, submit, busy }: any) {
   const initial = workspace.recipients.map((recipient: any) => recipient.creator_id);
   const [selected, setSelected] = useState<string[]>(initial);
-  function toggle(id: string) { setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]); }
+  function toggle(id: string) {
+    setSelected((current) => {
+      const alreadySelected = current.includes(id);
+      const suppressed = Boolean(workspace.creators.find((creator: any) => creator.id === id)?.suppressed);
+      if (suppressed && !alreadySelected) return current;
+      return alreadySelected ? current.filter((value) => value !== id) : [...current, id];
+    });
+  }
   return (
     <Modal title={`调整「${project.name}」达人名单`} close={close} wide>
       <div className="creator-picker tall">
-        {workspace.creators.map((creator: any) => <label className={selected.includes(creator.id) ? "selected" : ""} key={creator.id}><input type="checkbox" checked={selected.includes(creator.id)} onChange={() => toggle(creator.id)} /><Avatar name={creator.handle}/><span><b>@{creator.handle}</b><small>{formatNumber(creator.followers)} 粉丝 · {formatNumber(creator.avg_views)} 均播</small></span></label>)}
+        {workspace.creators.map((creator: any) => { const alreadySelected = selected.includes(creator.id); return <label className={alreadySelected ? "selected" : ""} key={creator.id}><input type="checkbox" disabled={Boolean(creator.suppressed) && !alreadySelected} checked={alreadySelected} onChange={() => toggle(creator.id)} /><Avatar name={creator.handle}/><span><b>@{creator.handle}</b><small>{creator.suppressed ? (alreadySelected ? "已停止联系；取消勾选可从项目移除" : "已进入全局停止联系名单") : `${formatNumber(creator.followers)} 粉丝 · ${formatNumber(creator.avg_views)} 均播`}</small></span></label>; })}
       </div>
       <footer className="modal-actions"><span>将发送给 {selected.length} 位达人</span><button className="secondary-button" onClick={close}>取消</button><button className="primary-button" disabled={busy || !selected.length} onClick={() => submit({ action: "set_recipients", project_id: project.id, creator_ids: selected })}>保存达人分配</button></footer>
     </Modal>
@@ -222,6 +233,8 @@ function ProjectWorkspace({ workspace, project, busy, postWorkspace, openRecipie
   const sentLocked = ["queued", "sending", "paused", "failed", "completed", "delivery_unknown"].includes(project.status);
 
   const sender = workspace.senders.find((item: any) => item.id === senderId);
+  const senderRuntime = workspace.runtime_senders?.find((item: any) => item.id === senderId);
+  const minIntervalSeconds = senderRuntime?.safety_policy?.min_interval_seconds || (sender?.provider === "ses" ? 2 : sender?.account_type === "company" ? 10 : 30);
   return (
     <>
       <section className="metric-grid">
@@ -249,6 +262,7 @@ function ProjectWorkspace({ workspace, project, busy, postWorkspace, openRecipie
           <div className="form-stack template-editor">
             <label><span>英文主题</span><input disabled={sentLocked} value={subject} onChange={(e) => setSubject(e.target.value)} lang="en" /></label>
             <label><span>英文正文</span><textarea disabled={sentLocked} rows={13} value={body} onChange={(e) => setBody(e.target.value)} lang="en" /></label>
+            <small>系统要求保留低摩擦退出语，用于明确告知达人可以停止后续联系；删除后无法保存项目。</small>
           </div>
           <div className="panel-actions">
             <small>{sentLocked ? "项目已有发送记录，首次建联快照已锁定。" : "修改模板或发件邮箱会自动使旧审批失效。"}</small>
@@ -264,10 +278,11 @@ function ProjectWorkspace({ workspace, project, busy, postWorkspace, openRecipie
           <p className="eyebrow">SEND PLAN</p><h2>发送计划</h2>
           <div><span>Campaign ID</span><code>{project.campaign_id}</code></div>
           <div><span>默认发件人</span><b>{sender ? `${sender.from_name} · ${sender.from_email}` : "未配置"}</b></div>
+          <div><span>发件链路</span><b>{sender ? (sender.account_type === "company" ? "企业客户邮箱" : "个人邮箱池") : "未配置"}</b></div>
           <div><span>邮件数量</span><b>{project.recipient_count} 封</b></div>
           <div><span>邮件生成</span><b>{personalizationMode === "ai" ? "AI 个性化开场" : "纯模板 · 不调用 AI"}</b></div>
           <div><span>自动 Follow-up</span><b>关闭</b></div>
-          <div><span>发送方式</span><b>顺序队列 · 最低 1 秒间隔</b></div>
+          <div><span>发送方式</span><b>顺序队列 · 同邮箱至少 {minIntervalSeconds} 秒</b></div>
           <button className="secondary-button full" onClick={openRecipients} disabled={sentLocked}>调整达人名单</button>
           <button className="primary-button full" onClick={openApprovals}>进入审批与发送</button>
         </aside>
@@ -280,7 +295,7 @@ function ProjectWorkspace({ workspace, project, busy, postWorkspace, openRecipie
             <td><div className="creator-cell"><Avatar name={recipient.handle} tone={index % 2 ? "blue" : "mint"}/><div><b>@{recipient.handle}</b><small>{recipient.city || recipient.country}</small></div></div></td>
             <td><span className="category">{(recipient.traits || []).slice(0, 2).map((trait: string) => traitLabels[trait] || trait.replace("_", " ")).join(" · ") || "—"}</span><small>{(recipient.engagement_rate * 100).toFixed(1)}% 互动率</small></td>
             <td><b>{formatNumber(recipient.followers)}</b><small>{formatNumber(recipient.avg_views)} 平均播放</small></td>
-            <td><span className="email-cell">{recipient.contact_email}</span></td>
+            <td><span className="email-cell">{recipient.contact_email}</span>{Boolean(recipient.suppressed) && <Pill tone="red">已停止联系</Pill>}</td>
             <td><select className="inline-select" disabled={busy || sentLocked} value={recipient.sender_override_id || ""} onChange={(e) => postWorkspace({ action: "set_recipient_sender", project_id: project.id, recipient_id: recipient.id, sender_id: e.target.value })}><option value="">使用项目默认邮箱</option>{workspace.senders.map((item: any) => <option key={item.id} value={item.id}>{item.from_email}</option>)}</select></td>
           </tr>)}
         </tbody></table></div>
@@ -383,38 +398,67 @@ function Approvals({ workspace, project, busy, postWorkspace, postSend, job }: a
 
 function SenderAccounts({ workspace, busy, postSend }: any) {
   const [editingId, setEditingId] = useState("");
+  const [accountType, setAccountType] = useState("personal");
   const [provider, setProvider] = useState("gmail");
-  const [label, setLabel] = useState("Vira Gmail");
+  const [label, setLabel] = useState("个人 Gmail");
   const [fromName, setFromName] = useState("Vira");
   const [fromEmail, setFromEmail] = useState("");
   const [replyTo, setReplyTo] = useState("");
   const [host, setHost] = useState("smtp.gmail.com");
   const [port, setPort] = useState(465);
   const [secure, setSecure] = useState(true);
-  const [dailyCap, setDailyCap] = useState(50);
+  const [dailyCap, setDailyCap] = useState(25);
   const [password, setPassword] = useState("");
+  const [awsRegion, setAwsRegion] = useState("eu-west-1");
+  const [accessKeyId, setAccessKeyId] = useState("");
+  const [secretAccessKey, setSecretAccessKey] = useState("");
+  const [sessionToken, setSessionToken] = useState("");
   const [aiModel, setAiModel] = useState(workspace.gateway?.ai?.model || "claude-sonnet-4-6");
   const [aiKey, setAiKey] = useState("");
   const runtimeById = new Map((workspace.runtime_senders || []).map((sender: any) => [sender.id, sender]));
-  const providerLabels: Record<string, string> = { gmail: "Gmail API", outlook: "Microsoft Graph", custom: "自定义 SMTP" };
+  const providerLabels: Record<string, string> = { ses: "Amazon SES API", gmail: "Gmail API", outlook: "Microsoft Graph", custom: "自定义 SMTP" };
+  const maxDailyCap = provider === "ses" ? 5000 : accountType === "company" ? 500 : 100;
+  const minInterval = provider === "ses" ? 2 : accountType === "company" ? 10 : 30;
+
+  function chooseAccountType(value: string) {
+    setAccountType(value);
+    if (value === "personal") {
+      setProvider("gmail"); setLabel("个人 Gmail"); setHost("gmail.googleapis.com"); setPort(443); setDailyCap(25);
+    } else {
+      setProvider("gmail"); setLabel("企业 Google Workspace"); setHost("gmail.googleapis.com"); setPort(443); setDailyCap(100);
+    }
+    setSecure(true);
+  }
 
   function chooseProvider(value: string) {
     setProvider(value);
-    if (value === "gmail") { setLabel((current) => current || "Gmail"); setHost("gmail.googleapis.com"); setPort(443); setSecure(true); }
-    if (value === "outlook") { setLabel((current) => current || "Outlook"); setHost("graph.microsoft.com"); setPort(443); setSecure(true); }
+    if (value === "ses") { setLabel("企业 Amazon SES"); setHost("email.eu-west-1.amazonaws.com"); setPort(443); setSecure(true); setDailyCap(500); }
+    if (value === "gmail") { setLabel(accountType === "company" ? "企业 Google Workspace" : "个人 Gmail"); setHost("gmail.googleapis.com"); setPort(443); setSecure(true); setDailyCap(accountType === "company" ? 100 : 25); }
+    if (value === "outlook") { setLabel(accountType === "company" ? "企业 Microsoft 365" : "个人 Outlook"); setHost("graph.microsoft.com"); setPort(443); setSecure(true); setDailyCap(accountType === "company" ? 100 : 25); }
     if (value === "custom") { setHost("smtp.example.com"); setPort(465); setSecure(true); }
   }
   function edit(sender: any) {
     setEditingId(sender.id); setLabel(sender.label); setFromName(sender.from_name); setFromEmail(sender.from_email);
     setReplyTo(sender.reply_to_email || ""); setHost(sender.smtp_host); setPort(sender.smtp_port); setSecure(Boolean(sender.secure));
-    setDailyCap(sender.daily_cap); setPassword(""); setProvider(sender.provider || (sender.auth_mode === "oauth" ? "gmail" : "custom"));
+    setAccountType(sender.account_type || "personal"); setDailyCap(sender.daily_cap); setPassword(""); setAccessKeyId(""); setSecretAccessKey(""); setSessionToken("");
+    setProvider(sender.provider || (sender.auth_mode === "oauth" ? "gmail" : "custom"));
+    const regionMatch = String(sender.smtp_host || "").match(/^email\.([a-z0-9-]+)\.amazonaws\.com$/);
+    setAwsRegion(sender.aws_region || regionMatch?.[1] || "eu-west-1");
   }
   async function submitSender(event: React.FormEvent) {
     event.preventDefault();
     const sender = {
       id: editingId || undefined, label, from_name: fromName, from_email: fromEmail,
-      reply_to_email: replyTo, smtp_host: host, smtp_port: port, secure, daily_cap: dailyCap,
+      reply_to_email: replyTo, smtp_host: host, smtp_port: port, secure, daily_cap: dailyCap, provider, account_type: accountType,
     };
+    if (provider === "ses") {
+      await postSend({ action: "configure_sender", sender: {
+        ...sender, aws_region: awsRegion, access_key_id: accessKeyId,
+        secret_access_key: secretAccessKey, session_token: sessionToken,
+      } });
+      setAccessKeyId(""); setSecretAccessKey(""); setSessionToken("");
+      return;
+    }
     if (provider === "custom") {
       await postSend({ action: "configure_sender", sender: { ...sender, password } });
       setPassword("");
@@ -454,16 +498,18 @@ function SenderAccounts({ workspace, busy, postSend }: any) {
   }
   return (
     <>
-      <div className="page-heading"><div><p className="eyebrow">SENDER ACCOUNTS</p><h1>邮箱账户</h1><p className="lede">Gmail 和 Outlook 只需填写邮箱并完成一次官方授权；自定义邮箱仍可使用 SMTP。令牌和密码都不会写入项目数据库。</p></div><Pill tone={workspace.gateway?.online ? "green" : "red"}>{workspace.gateway?.online ? "本地网关在线" : "发送网关离线"}</Pill></div>
+      <div className="page-heading"><div><p className="eyebrow">DELIVERY & MAILBOX</p><h1>邮箱池与安全投递</h1><p className="lede">个人邮箱池走逐账号官方授权；企业客户连接自己的品牌邮箱或已验证域名。两条链路共享审批、去重、限速、停发与审计门禁。</p></div><Pill tone={workspace.gateway?.online ? "green" : "red"}>{workspace.gateway?.online ? "本地网关在线" : "发送网关离线"}</Pill></div>
       <section className="sender-layout">
         <article className="panel sender-list"><div className="section-title-row compact"><div><p className="eyebrow">VERIFIED IDENTITIES</p><h2>已配置发件身份</h2></div><span>{workspace.senders.length} 个</span></div>
-          {workspace.senders.length ? workspace.senders.map((sender: any) => { const runtime: any = runtimeById.get(sender.id); const oauth = sender.auth_mode === "oauth"; return <div className="sender-row" key={sender.id}><Avatar name={sender.from_name}/><div><b>{sender.label}</b><span>{sender.from_name} &lt;{sender.from_email}&gt;</span><small>{providerLabels[sender.provider] || "自定义 SMTP"} · 今日 {runtime?.sent_today || 0}/{sender.daily_cap}</small></div><div className="sender-status"><Pill tone={runtime?.verified ? "green" : runtime?.configured ? "amber" : "red"}>{runtime?.verified ? "连接已验证" : runtime?.configured ? "待验证" : oauth ? "需重新授权" : "需重新输入密码"}</Pill><button className="text-button" onClick={() => edit(sender)}>{oauth ? "重新连接" : "编辑"}</button><button className="text-button" disabled={busy || !runtime?.configured} onClick={() => postSend({ action: "verify_sender", sender_id: sender.id })}>测试连接</button></div></div>}) : <div className="mini-empty">尚未添加发件邮箱。连接并验证后，项目才能生成审批批次。</div>}
+          {workspace.senders.length ? workspace.senders.map((sender: any) => { const runtime: any = runtimeById.get(sender.id); const oauth = sender.auth_mode === "oauth"; const environment = sender.provider === "ses" && runtime?.verified ? runtime.production_access ? "SES生产环境" : "SES沙盒环境" : ""; const typeLabel = sender.account_type === "company" ? "企业链路" : "个人链路"; return <div className="sender-row" key={sender.id}><Avatar name={sender.from_name}/><div><b>{sender.label}</b><span>{sender.from_name} &lt;{sender.from_email}&gt;</span><small>{typeLabel} · {providerLabels[sender.provider] || "自定义 SMTP"} · 今日 {runtime?.sent_today || 0}/{sender.daily_cap}{environment ? ` · ${environment}` : ""}</small></div><div className="sender-status"><Pill tone={runtime?.verified ? "green" : runtime?.configured ? "amber" : "red"}>{runtime?.verified ? "连接已验证" : runtime?.configured ? "待验证" : oauth ? "需重新授权" : "需重新输入凭据"}</Pill><button className="text-button" onClick={() => edit(sender)}>{oauth ? "重新连接" : "编辑"}</button><button className="text-button" disabled={busy || !runtime?.configured} onClick={() => postSend({ action: "verify_sender", sender_id: sender.id })}>测试连接</button></div></div>}) : <div className="mini-empty">尚未添加投递通道。连接并验证后，项目才能生成审批批次。</div>}
         </article>
         <article className="panel sender-form"><p className="eyebrow">{editingId ? "RECONFIGURE" : "ADD SENDER"}</p><h2>{editingId ? "重新配置邮箱" : "添加发件邮箱"}</h2>
           <form onSubmit={submitSender}>
-            <div className="form-grid two"><label><span>连接方式</span><select value={provider} onChange={(e) => chooseProvider(e.target.value)}><option value="gmail">Gmail API（推荐）</option><option value="outlook">Outlook / Microsoft 365</option><option value="custom">自定义 SMTP</option></select></label><label><span>账户标签</span><input required value={label} onChange={(e) => setLabel(e.target.value)}/></label><label><span>显示名称</span><input required value={fromName} onChange={(e) => setFromName(e.target.value)}/></label><label><span>发件邮箱</span><input type="email" required value={fromEmail} onChange={(e) => setFromEmail(e.target.value)}/></label><label><span>Reply-To（可选）</span><input type="email" value={replyTo} onChange={(e) => setReplyTo(e.target.value)}/></label><label><span>每日上限</span><input type="number" min="1" max="500" value={dailyCap} onChange={(e) => setDailyCap(Number(e.target.value))}/></label>{provider === "custom" && <><label><span>SMTP Host</span><input required value={host} onChange={(e) => setHost(e.target.value)}/></label><label><span>端口</span><input required type="number" value={port} onChange={(e) => setPort(Number(e.target.value))}/></label></>}</div>
-            {provider === "custom" ? <><label className="check-label"><input type="checkbox" checked={secure} onChange={(e) => setSecure(e.target.checked)}/>SMTP over TLS（465 通常开启；587 通常关闭后使用 STARTTLS）</label><label className="password-field"><span>应用密码 / SMTP Password</span><input type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="只写，不会回显"/></label><div className="secret-note">密码只保存在当前本地发送网关的内存中，重启后需要重新输入。</div></> : <div className="oauth-note"><b>无需填写邮箱密码</b><span>点击下方按钮后，在 {provider === "gmail" ? "Google" : "Microsoft"} 官方页面确认发信权限。授权令牌只保存在本地网关内存中。</span></div>}
-            <button className="primary-button full" disabled={busy || !workspace.gateway?.online}>{busy ? "正在连接…" : provider === "custom" ? "保存 SMTP 配置（下一步测试）" : `连接 ${provider === "gmail" ? "Gmail" : "Outlook"} 并授权`}</button>
+            <div className="sender-route-picker"><button type="button" className={accountType === "personal" ? "active" : ""} onClick={() => chooseAccountType("personal")}><b>个人邮箱池</b><span>50个邮箱逐个 OAuth/SMTP 授权</span></button><button type="button" className={accountType === "company" ? "active" : ""} onClick={() => chooseAccountType("company")}><b>企业客户邮箱</b><span>品牌邮箱、Workspace、M365或SES</span></button></div>
+            <div className="route-guidance"><b>{accountType === "company" ? "企业链路" : "个人链路"}</b><span>{accountType === "company" ? "由客户授权真实品牌邮箱；SES只接受已验证域名和有效DKIM。" : "每个邮箱必须独立授权；系统强制单账号每日≤100封、同账号至少间隔30秒。"}</span></div>
+            <div className="form-grid two"><label><span>连接方式</span><select value={provider} onChange={(e) => chooseProvider(e.target.value)}>{accountType === "company" && <option value="ses">Amazon SES API（已验证域名）</option>}<option value="gmail">{accountType === "company" ? "Google Workspace OAuth" : "Gmail OAuth"}</option><option value="outlook">{accountType === "company" ? "Microsoft 365 OAuth" : "Outlook OAuth"}</option><option value="custom">自定义 SMTP</option></select></label><label><span>账户标签</span><input required value={label} onChange={(e) => setLabel(e.target.value)}/></label><label><span>显示名称</span><input required value={fromName} onChange={(e) => setFromName(e.target.value)}/></label><label><span>发件邮箱</span><input type="email" required value={fromEmail} onChange={(e) => setFromEmail(e.target.value)}/></label><label><span>人工回信邮箱（Reply-To）</span><input type="email" value={replyTo} onChange={(e) => setReplyTo(e.target.value)} placeholder="建议填写团队日常收件邮箱"/></label><label><span>LOOP每日安全上限</span><input type="number" min="1" max={maxDailyCap} value={dailyCap} onChange={(e) => setDailyCap(Number(e.target.value))}/><small>服务端上限 {maxDailyCap} 封 · 最小间隔 {minInterval} 秒</small></label>{provider === "custom" && <><label><span>SMTP Host</span><input required value={host} onChange={(e) => setHost(e.target.value)}/></label><label><span>端口</span><input required type="number" value={port} onChange={(e) => setPort(Number(e.target.value))}/></label></>}{provider === "ses" && <><label><span>AWS Region</span><input required value={awsRegion} onChange={(e) => setAwsRegion(e.target.value)} placeholder="eu-west-1"/></label><label><span>Access Key ID</span><input required autoComplete="off" value={accessKeyId} onChange={(e) => setAccessKeyId(e.target.value)} placeholder="只写，不会回显"/></label></>}</div>
+            {provider === "ses" ? <><label className="password-field"><span>Secret Access Key</span><input type="password" autoComplete="new-password" required value={secretAccessKey} onChange={(e) => setSecretAccessKey(e.target.value)} placeholder="只写，不会回显"/></label><label className="password-field"><span>Session Token（使用临时凭证时填写）</span><input type="password" autoComplete="new-password" value={sessionToken} onChange={(e) => setSessionToken(e.target.value)} placeholder="可选，只写"/></label><div className="secret-note">LOOP只验证发信权限和发件身份，不会发送测试邮件。AWS凭据仅保存在当前本地网关内存中；每日上限不代表SES已批准相同额度。</div></> : provider === "custom" ? <><label className="check-label"><input type="checkbox" checked={secure} onChange={(e) => setSecure(e.target.checked)}/>SMTP over TLS（465 通常开启；587 通常关闭后使用 STARTTLS）</label><label className="password-field"><span>应用密码 / SMTP Password</span><input type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="只写，不会回显"/></label><div className="secret-note">密码只保存在当前本地发送网关的内存中，重启后需要重新输入。</div></> : <div className="oauth-note"><b>无需填写邮箱密码</b><span>点击下方按钮后，在 {provider === "gmail" ? "Google" : "Microsoft"} 官方页面确认发信权限。授权令牌只保存在本地网关内存中。</span></div>}
+            <button className="primary-button full" disabled={busy || !workspace.gateway?.online}>{busy ? "正在连接…" : provider === "ses" ? "保存 SES API 配置（下一步验证）" : provider === "custom" ? "保存 SMTP 配置（下一步测试）" : `连接 ${provider === "gmail" ? "Gmail" : "Outlook"} 并授权`}</button>
           </form>
         </article>
       </section>
@@ -483,13 +529,16 @@ function SenderAccounts({ workspace, busy, postSend }: any) {
   );
 }
 
-function Replies({ workspace, project }: any) {
+function Replies({ workspace, project, busy, postWorkspace }: any) {
   const items = project ? workspace.batch_items : [];
   const sent = items.filter((item: any) => item.status === "sent");
   const failed = items.filter((item: any) => item.status === "failed");
   const unknown = items.filter((item: any) => item.status === "delivery_unknown");
   const resultItems = items.filter((item: any) => ["sent", "failed", "delivery_unknown", "skipped_existing"].includes(item.status));
-  return <><div className="page-heading"><div><p className="eyebrow">DELIVERY & REPLIES</p><h1>发送结果与回复</h1><p className="lede">先确认每封首联的实际发送结果；回复同步只匹配带稳定 Message-ID 的邮件线程。</p></div><Pill tone="amber">回复同步待启用</Pill></div><section className="reply-kpis"><div><span>已发送</span><strong className="text-green">{sent.length}</strong><small>服务商已接受</small></div><div><span>发送失败</span><strong>{failed.length}</strong><small>可查看失败原因</small></div><div><span>投递未知</span><strong className={unknown.length ? "danger-text" : ""}>{unknown.length}</strong><small>出现即暂停队列</small></div><div><span>已匹配回复</span><strong>0</strong><small>需启用收件权限</small></div></section>{unknown.length > 0 && <section className="critical-banner"><b>存在无法确认的投递结果</b><p>请先检查发件箱或邮件服务商记录，不要重新发送。</p></section>}{resultItems.length ? <section className="panel delivery-results"><div className="section-title-row compact"><div><p className="eyebrow">MESSAGE RESULTS</p><h2>{project?.name} · 每封邮件结果</h2></div><span>{resultItems.length} 条</span></div><div className="table-wrap"><table><thead><tr><th>达人</th><th>收件邮箱</th><th>发送状态</th><th>发送时间</th><th>结果依据</th></tr></thead><tbody>{resultItems.map((item: any) => <tr key={item.id}><td><div className="creator-cell"><Avatar name={item.handle}/><div><b>@{item.handle}</b><small>{item.subject}</small></div></div></td><td><span className="email-cell">{item.recipient_email}</span></td><td><Pill tone={statusTone(item.status)}>{batchStatus[item.status] || item.status}</Pill></td><td><small>{item.sent_at ? new Date(item.sent_at).toLocaleString("zh-CN", { hour12: false }) : "—"}</small></td><td><small className={item.status === "delivery_unknown" ? "danger-text" : ""}>{item.message_id || item.last_error || "已记录"}</small></td></tr>)}</tbody></table></div></section> : <Empty title="还没有正式发送结果" text="邮件通过审批并正式发送后，这里会展示每封邮件的状态、时间、Message-ID和失败原因。" />}</>;
+  const sender = workspace.senders?.find((item: any) => item.id === project?.default_sender_id);
+  const manualReplyMailbox = sender?.reply_to_email || sender?.from_email || "尚未配置";
+  const suppressedEmails = new Set((workspace.suppressions || []).map((item: any) => String(item.email).toLowerCase()));
+  return <><div className="page-heading"><div><p className="eyebrow">DELIVERY RESULTS</p><h1>首次建联发送结果</h1><p className="lede">LOOP只负责首封投递与安全记录；达人回复进入人工邮箱。遇到拒绝、退订、投诉或退信时，请立即加入全局停止联系名单。</p></div><Pill tone="blue">回复转人工</Pill></div><section className="reply-kpis"><div><span>已发送</span><strong className="text-green">{sent.length}</strong><small>服务商已接受</small></div><div><span>发送失败</span><strong>{failed.length}</strong><small>可查看失败原因</small></div><div><span>全局停止联系</span><strong>{workspace.suppressions?.length || 0}</strong><small>所有项目发送前拦截</small></div><div><span>人工回信邮箱</span><strong className="mailbox-kpi">{manualReplyMailbox}</strong><small>达人回复后请在邮箱中处理</small></div></section>{unknown.length > 0 && <section className="critical-banner"><b>存在无法确认的投递结果</b><p>请先检查发件箱或邮件服务商记录，不要重新发送。</p></section>}{resultItems.length ? <section className="panel delivery-results"><div className="section-title-row compact"><div><p className="eyebrow">MESSAGE RESULTS</p><h2>{project?.name} · 每封邮件结果</h2></div><span>{resultItems.length} 条</span></div><div className="table-wrap"><table><thead><tr><th>达人</th><th>收件邮箱</th><th>发送状态</th><th>发送时间</th><th>结果依据</th><th>联系权限</th></tr></thead><tbody>{resultItems.map((item: any) => { const suppressed = suppressedEmails.has(String(item.recipient_email).toLowerCase()); return <tr key={item.id}><td><div className="creator-cell"><Avatar name={item.handle}/><div><b>@{item.handle}</b><small>{item.subject}</small></div></div></td><td><span className="email-cell">{item.recipient_email}</span></td><td><Pill tone={statusTone(item.status)}>{batchStatus[item.status] || item.status}</Pill></td><td><small>{item.sent_at ? new Date(item.sent_at).toLocaleString("zh-CN", { hour12: false }) : "—"}</small></td><td><small className={item.status === "delivery_unknown" ? "danger-text" : ""}>{item.message_id || item.last_error || "已记录"}</small></td><td>{suppressed ? <Pill tone="red">已停止联系</Pill> : <button className="text-button danger-text" disabled={busy} onClick={() => { if (window.confirm(`确认将 ${item.recipient_email} 加入全局停止联系名单？`)) postWorkspace({ action: "suppress_recipient", project_id: project?.id, email: item.recipient_email, reason: "manual" }); }}>停止再联系</button>}</td></tr>; })}</tbody></table></div></section> : <Empty title="还没有正式发送结果" text="邮件通过审批并正式发送后，这里会展示每封邮件的状态、时间、Message-ID和失败原因。" />}</>;
 }
 
 function Safety({ workspace }: any) {
@@ -498,10 +547,14 @@ function Safety({ workspace }: any) {
   const controls = [
     ["不可变审批批次", "From、To、Subject、Body 和项目发件分配使用 SHA-256 锁定"],
     ["批次单次入队", "浏览器只提交一次 run_id，双击和断网重试返回同一运行实例"],
-    ["持久发送日志", "邮件服务商调用前先写 sending 并分配稳定 Message-ID"],
+    ["持久发送日志", "服务商调用前先记录唯一尝试ID，成功后保存服务商 Message-ID"],
     ["全局运行锁", "所有项目共用一把发送锁，禁止并发消耗同一邮箱额度"],
     ["未知投递熔断", "网络结果不明确时立即暂停，绝不自动重试"],
-    ["凭据只写", "OAuth 令牌和应用密码不进入项目数据库、不回显、不写审计日志"],
+    ["分链路强制限流", "个人邮箱每日≤100封且间隔≥30秒；企业邮箱与SES使用各自服务端上限"],
+    ["全局停止联系", "退订、拒绝、投诉或退信地址进入跨项目 suppression，发送前再次拦截"],
+    ["低摩擦退出", "英文模板必须保留明确停止联系语；自动 Follow-up 默认关闭"],
+    ["追踪默认关闭", "MVP不主动注入开信像素或点击重写，减少隐私和投递信誉风险"],
+    ["凭据只写", "AWS密钥、OAuth令牌和应用密码不进入项目数据库、不回显、不写审计日志"],
   ];
   const readiness = [
     ["项目数据", true, "已启用持久化与用户隔离"],
@@ -509,7 +562,7 @@ function Safety({ workspace }: any) {
     ["AI个性化", !aiRequired || workspace.gateway?.ai?.configured, !aiRequired ? "当前项目使用纯模板" : workspace.gateway?.ai?.configured ? "当前会话已配置" : "需在邮箱账户页配置"],
     ["发件邮箱", workspace.runtime_senders?.some((sender: any) => sender.verified), workspace.runtime_senders?.some((sender: any) => sender.verified) ? "至少一个邮箱已验证" : "尚无已验证邮箱"],
   ];
-  return <><div className="page-heading"><div><p className="eyebrow">GUARDRAILS / AUDIT</p><h1>安全门禁与审计</h1><p className="lede">项目管理不会绕开首次建联 Agent 的幂等、额度、稳定 Message-ID、运行锁和全局熔断。</p></div><Pill tone={workspace.gateway?.circuit?.open ? "red" : "green"}>{workspace.gateway?.circuit?.open ? "全局熔断已打开" : "外发熔断器正常"}</Pill></div><section className="readiness-grid">{readiness.map(([title, ready, detail]) => <article className="panel readiness-card" key={String(title)}><Pill tone={ready ? "green" : "amber"}>{ready ? "READY" : "SETUP"}</Pill><b>{title}</b><small>{detail}</small></article>)}</section>{workspace.gateway?.circuit?.open && <section className="critical-banner"><b>禁止继续发送</b><p>{workspace.gateway.circuit.reason || "存在未解决的投递结果"}</p></section>}<section className="safety-grid">{controls.map(([title, text], index) => <article className="panel safety-card" key={title}><span className="safety-index">0{index + 1}</span><div><h2>{title}</h2><p>{text}</p></div><Pill tone="green">ACTIVE</Pill></article>)}</section><section className="panel audit-stream"><div className="section-title-row compact"><div><p className="eyebrow">AUDIT EVENTS</p><h2>最近项目事件</h2></div><code>D1 append-only view</code></div>{workspace.audit_events.map((event: any) => <div className="audit-row" key={event.id}><time>{new Date(event.created_at).toLocaleString("zh-CN", { hour12: false })}</time><span className="event-dot"></span><b>{event.event_type}</b><code>{event.entity_id}</code></div>)}</section></>;
+  return <><div className="page-heading"><div><p className="eyebrow">GUARDRAILS / AUDIT</p><h1>安全门禁与审计</h1><p className="lede">个人与企业两种发件链路都不能绕开幂等、审批、服务端限流、停止联系名单、运行锁和全局熔断。</p></div><Pill tone={workspace.gateway?.circuit?.open ? "red" : "green"}>{workspace.gateway?.circuit?.open ? "全局熔断已打开" : "外发熔断器正常"}</Pill></div><section className="readiness-grid">{readiness.map(([title, ready, detail]) => <article className="panel readiness-card" key={String(title)}><Pill tone={ready ? "green" : "amber"}>{ready ? "READY" : "SETUP"}</Pill><b>{title}</b><small>{detail}</small></article>)}</section>{workspace.gateway?.circuit?.open && <section className="critical-banner"><b>禁止继续发送</b><p>{workspace.gateway.circuit.reason || "存在未解决的投递结果"}</p></section>}<section className="panel route-summary"><div><b>个人邮箱池</b><span>{workspace.senders?.filter((sender: any) => sender.account_type !== "company").length || 0} 个账号 · 逐个授权 · 30秒最小间隔</span></div><div><b>企业客户邮箱</b><span>{workspace.senders?.filter((sender: any) => sender.account_type === "company").length || 0} 个账号 · 品牌身份发送 · 10秒/SES 2秒最小间隔</span></div><div><b>停止联系名单</b><span>{workspace.suppressions?.length || 0} 个地址 · 所有项目共享</span></div></section><section className="safety-grid">{controls.map(([title, text], index) => <article className="panel safety-card" key={title}><span className="safety-index">{String(index + 1).padStart(2, "0")}</span><div><h2>{title}</h2><p>{text}</p></div><Pill tone="green">ACTIVE</Pill></article>)}</section><section className="panel audit-stream"><div className="section-title-row compact"><div><p className="eyebrow">AUDIT EVENTS</p><h2>最近项目事件</h2></div><code>D1 append-only view</code></div>{workspace.audit_events.map((event: any) => <div className="audit-row" key={event.id}><time>{new Date(event.created_at).toLocaleString("zh-CN", { hour12: false })}</time><span className="event-dot"></span><b>{event.event_type}</b><code>{event.entity_id}</code></div>)}</section></>;
 }
 
 function SetupWizard({ workspace, project, busy, close, saveMode, openSettings }: any) {
@@ -529,7 +582,7 @@ function SetupWizard({ workspace, project, busy, close, saveMode, openSettings }
       <div className="setup-wizard">
         <div className="setup-intro"><span>3 步完成</span><h3>先完成发送环境，再创建正式批次</h3><p>初始化只检查本机发送网关，不会发送任何邮件。所有正式邮件仍需逐封审批并二次确认。</p></div>
         <section className="setup-step"><i>01</i><div><b>选择邮件生成方式</b><p>纯模板不调用大模型；AI 模式只润色个性化开场。</p><select disabled={locked} value={mode} onChange={(event) => setMode(event.target.value)}><option value="template">纯模板（不调用 AI）</option><option value="ai">AI 个性化开场</option></select>{locked && <small>项目已有发送记录，生成方式已锁定。</small>}</div><Pill tone="green">已选择</Pill></section>
-        <section className="setup-step"><i>02</i><div><b>连接邮件池</b><p>添加 Gmail、Outlook 或 SMTP，并完成连接测试。支持多个发件邮箱按项目分配。</p></div><Pill tone={senderReady ? "green" : "amber"}>{senderReady ? "已就绪" : "待设置"}</Pill></section>
+        <section className="setup-step"><i>02</i><div><b>选择个人或企业发件链路</b><p>个人邮箱逐账号授权；企业客户连接自己的品牌邮箱、Workspace、Microsoft 365或已验证域名SES。</p></div><Pill tone={senderReady ? "green" : "amber"}>{senderReady ? "已就绪" : "待设置"}</Pill></section>
         <section className="setup-step"><i>03</i><div><b>配置模型 API</b><p>{mode === "ai" ? "AI 个性化模式需要配置 Anthropic API Key。" : "纯模板模式会跳过大模型，本项可稍后配置。"}</p></div><Pill tone={mode !== "ai" || aiReady ? "green" : "amber"}>{mode !== "ai" ? "无需配置" : aiReady ? "已就绪" : "待设置"}</Pill></section>
         <div className="setup-note">当前项目：<b>{project?.name || "尚未创建项目"}</b> · 当前模式：<b>{mode === "ai" ? "AI 个性化" : "纯模板"}</b></div>
         <footer className="setup-actions"><button className="secondary-button" onClick={close}>稍后设置</button><button className="primary-button" disabled={busy} onClick={continueSetup}>{busy ? "正在保存…" : senderReady && (mode !== "ai" || aiReady) ? "保存并进入工作台" : "保存并前往邮箱/API 设置"}</button></footer>
@@ -628,7 +681,7 @@ export default function Home() {
     : view === "approvals"
       ? <Approvals key={`${project?.id}-${latestBatch?.id || "none"}-${latestBatch?.status || "empty"}`} workspace={workspace} project={project} busy={busy} postWorkspace={postWorkspace} postSend={postSend} job={job}/>
       : view === "replies"
-        ? <Replies workspace={workspace} project={project}/>
+        ? <Replies workspace={workspace} project={project} busy={busy} postWorkspace={postWorkspace}/>
         : view === "senders"
           ? <SenderAccounts workspace={workspace} busy={busy} postSend={postSend}/>
           : <Safety workspace={workspace}/>;

@@ -4,6 +4,7 @@ import {
   importCreators,
   setRecipientSender,
   setProjectRecipients,
+  suppressRecipient,
   updateProject,
   workspaceSnapshot,
 } from "../../../db/outreach-store";
@@ -48,6 +49,8 @@ export async function POST(request: Request) {
       await setProjectRecipients(owner, payload);
     } else if (payload.action === "set_recipient_sender") {
       await setRecipientSender(owner, payload);
+    } else if (payload.action === "suppress_recipient") {
+      await suppressRecipient(owner, payload);
     } else if (payload.action === "import_creators") {
       const filename = String(payload.filename || "candidates.json").slice(0, 180);
       const parsed = parseCandidateDocument(String(payload.document || ""), filename);
