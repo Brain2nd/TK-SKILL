@@ -11,16 +11,6 @@ import path from "node:path";
 import process from "node:process";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
-import {
-  HumanChallengeError,
-  captureDiagnostic,
-  createPacer,
-  detectChallengeSnapshot,
-  runInjectedExtractor,
-  resolveChromiumExecutable,
-  safeNavigate,
-  waitForStableDom,
-} from "./browser_resilience.mjs";
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
 
@@ -42,13 +32,6 @@ const target = Number(value("--target", "4000"));
 const maxFollowers = Number(value("--max-followers", "10000"));
 const setupTimeout = Number(value("--setup-timeout", "600")) * 1000;
 const readyPath = path.join(profileDir, "ready.json");
-const minDelayMs = Number(value("--min-delay-ms", process.env.BROWSER_MIN_DELAY_MS || "2500"));
-const maxDelayMs = Number(value("--max-delay-ms", process.env.BROWSER_MAX_DELAY_MS || "6500"));
-const maxAttempts = Number(value("--max-attempts", "3"));
-const diagnosticsDir = path.resolve(value("--diagnostics-dir", path.join(path.dirname(output), "browser_diagnostics")));
-const checkpointPath = output.replace(/\.csv$/i, "") + ".checkpoint.json";
-const allowedHosts = ["fastmoss.com"];
-const pacer = createPacer({ minDelayMs, maxDelayMs });
 
 fs.mkdirSync(profileDir, { recursive: true });
 
@@ -66,21 +49,6 @@ function writeCsv(rows) {
   const lines = [fields.join(",")];
   for (const row of rows) lines.push(fields.map(field => csvCell(row[field])).join(","));
   fs.writeFileSync(output, `\uFEFF${lines.join("\n")}\n`);
-}
-
-function saveCheckpoint(found) {
-  fs.mkdirSync(path.dirname(checkpointPath), { recursive: true });
-  const temporary = `${checkpointPath}.tmp`;
-  fs.writeFileSync(temporary, JSON.stringify({
-    updated_at: new Date().toISOString(), rows: [...found.values()],
-  }, null, 2));
-  fs.renameSync(temporary, checkpointPath);
-}
-
-function loadCheckpoint() {
-  if (!has("--resume") || !fs.existsSync(checkpointPath)) return new Map();
-  const parsed = JSON.parse(fs.readFileSync(checkpointPath, "utf8"));
-  return new Map((parsed.rows || []).map(row => [row.username, row]));
 }
 
 async function visible(locator) {
@@ -176,7 +144,7 @@ async function setup(context) {
 }
 
 async function extractRows(page, fallbackCountry = "") {
-  return await runInjectedExtractor(page, (fallback) => {
+  return await page.evaluate((fallback) => {
     const containers = [
       ...document.querySelectorAll("table tbody tr, [role=row], .ant-table-row, .el-table__row"),
     ];
@@ -230,7 +198,7 @@ async function extractRows(page, fallbackCountry = "") {
       });
     }
     return rows;
-  }, fallbackCountry, { allowedHosts });
+  }, fallbackCountry);
 }
 
 function numberFromText(value) {
@@ -246,10 +214,8 @@ function numberFromText(value) {
 
 async function enrichFromDetail(page, row) {
   if (!row.source_url) return null;
-  await safeNavigate(page, row.source_url, {
-    allowedHosts, platform: "fastmoss", pacer, diagnosticsDir, attempts: maxAttempts,
-  });
-  const detail = await runInjectedExtractor(page, () => {
+  await page.goto(row.source_url, { waitUntil: "domcontentloaded", timeout: 60000 });
+  const detail = await page.evaluate(() => {
     const main = (document.querySelector("main")?.innerText || "").replace(/\s+/g, " ");
     const links = [...document.querySelectorAll("a[href]")].map(link => link.href);
     return {
@@ -259,7 +225,7 @@ async function enrichFromDetail(page, row) {
       profile_url: links.find(link => /tiktok\.com\/@/i.test(link)) || "",
       bio: main.slice(0, 2000),
     };
-  }, null, { allowedHosts });
+  });
   const followers = numberFromText(detail.followers || row.followers);
   // FastMoss masks some contacts with "...". Only retain a complete address;
   // Python performs the final MX-domain verification before qualification.
@@ -286,18 +252,8 @@ async function nextPage(page) {
   for (const selector of selectors) {
     const button = await visible(page.locator(selector));
     if (button && await button.isEnabled().catch(() => false)) {
-      await pacer.wait(page);
       await button.click();
-      await page.waitForTimeout(1000);
-      const snapshot = await runInjectedExtractor(page, () => ({
-        title: document.title || "",
-        text: (document.body?.innerText || "").slice(0, 4000),
-      }), null, { allowedHosts });
-      const challenge = detectChallengeSnapshot({ ...snapshot, url: page.url() });
-      if (challenge.challenged) {
-        await captureDiagnostic(page, diagnosticsDir, "fastmoss-challenge", challenge);
-        throw new HumanChallengeError(`FastMoss requires human verification (${challenge.marker}); collection paused`, challenge);
-      }
+      await page.waitForTimeout(1200);
       return true;
     }
   }
@@ -313,37 +269,23 @@ async function collect(context) {
   if (!ready.shop_filter_confirmed || !urls.length) throw new Error("FastMoss saved search is incomplete");
   const page = context.pages()[0] || await context.newPage();
   const detailPage = await context.newPage();
-  const found = loadCheckpoint();
+  const found = new Map();
   for (const creatorUrl of urls) {
     const filteredUrl = new URL(creatorUrl);
     filteredUrl.searchParams.set("shop_window", "1");
     filteredUrl.searchParams.set("contact", "3");
     filteredUrl.searchParams.set("page", "1");
-    await safeNavigate(page, filteredUrl.toString(), {
-      allowedHosts, platform: "fastmoss", pacer, diagnosticsDir, attempts: maxAttempts,
-    });
+    await page.goto(filteredUrl.toString(), { waitUntil: "domcontentloaded", timeout: 60000 });
     if (!await looksLoggedIn(page)) throw new Error("FastMoss session expired; run setup again");
     const countryMatch = creatorUrl.match(/(?:region|country)(?:=|%3D)(ES|FR|DE|IT|GB)/i);
     const fallbackCountry = countryMatch?.[1]?.toUpperCase() || "";
     let unchanged = 0;
     for (let pageNumber = 1; pageNumber <= 500 && found.size < target; pageNumber += 1) {
       const before = found.size;
-      await waitForStableDom(page, ["table tbody tr", "[role=row]", ".ant-table-row", ".el-table__row"], {
-        timeoutMs: 30000, settleMs: 800,
-      });
       for (const row of await extractRows(page, fallbackCountry)) {
         if (found.has(row.username)) continue;
-        let enriched = null;
-        try {
-          enriched = await enrichFromDetail(detailPage, row);
-        } catch (error) {
-          if (error instanceof HumanChallengeError) throw error;
-          console.error(`[fastmoss-browser] detail @${row.username} skipped: ${error?.message || error}`);
-        }
-        if (enriched) {
-          found.set(row.username, enriched);
-          saveCheckpoint(found);
-        }
+        const enriched = await enrichFromDetail(detailPage, row).catch(() => null);
+        if (enriched) found.set(row.username, enriched);
         if (found.size >= target) break;
       }
       console.error(`[fastmoss-browser] search=${urls.indexOf(creatorUrl) + 1}/${urls.length} page=${pageNumber} unique=${found.size}`);
@@ -358,10 +300,8 @@ async function collect(context) {
 
 let context;
 try {
-  const bundledChromium = resolveChromiumExecutable(chromium);
   context = await chromium.launchPersistentContext(profileDir, {
     headless: mode === "collect" && !has("--headed"),
-    ...(fs.existsSync(bundledChromium) ? { executablePath: bundledChromium } : {}),
     viewport: { width: 1440, height: 960 },
     acceptDownloads: true,
   });

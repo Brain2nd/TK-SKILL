@@ -2,17 +2,16 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 
 def main() -> None:
-    server = Path(__file__).resolve().with_name("kol_mcp_server.py")
+    launcher = Path(__file__).resolve().with_name("run_mcp.sh")
     config = {
         "mcpServers": {
             "tiktok-kol-analyzer": {
-                "command": sys.executable,
-                "args": [str(server)],
+                "command": str(launcher),
+                "args": [],
             }
         }
     }

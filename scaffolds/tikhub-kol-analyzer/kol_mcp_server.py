@@ -40,7 +40,6 @@ from tikhub_fetcher import (
     fetch_user_videos,
     search_creators_by_keyword,
 )
-from tiktok_browser_provider import collect_tiktok_public_profiles as browser_collect_tiktok_profiles
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -82,7 +81,7 @@ def _run_script(script: str, arguments: list[str]) -> dict[str, Any]:
     """Run one maintained CLI workflow and return bounded diagnostic output."""
     completed = subprocess.run(
         [sys.executable, script, *arguments], cwd=PROJECT_DIR, text=True,
-        stdin=subprocess.DEVNULL, capture_output=True, timeout=60 * 60,
+        capture_output=True, timeout=60 * 60,
     )
     return {
         "ok": completed.returncode == 0,
@@ -119,10 +118,6 @@ def get_runtime_status() -> dict[str, Any]:
         if importlib.util.find_spec(name) is None
     ]
     node = os.environ.get("CODEX_NODE_BIN") or shutil.which("node")
-    setup_args = [
-        str(PROJECT_DIR / "fastmoss_browser.mjs"),
-        "--setup", "--setup-timeout", "900",
-    ]
     return {
         "python_supported": sys.version_info >= (3, 10),
         "missing_python_modules": missing_python_modules,
@@ -133,13 +128,11 @@ def get_runtime_status() -> dict[str, Any]:
         ),
         "fastmoss_collection_mode": "website_only",
         "fastmoss_browser_session_ready": ready.exists(),
-        "fastmoss_setup": {"command": node or "node", "args": setup_args},
-        "fastmoss_setup_command": " ".join([node or "node", *setup_args]),
+        "fastmoss_setup_command": str(PROJECT_DIR / "fastmoss_browser_setup.sh"),
         "doctor_command": f"{sys.executable} {PROJECT_DIR / 'doctor.py'}",
         "supported_countries": ["ES", "FR", "DE", "IT", "GB"],
         "platform_routes": {
             "tts": {"source": "fastmoss_web", "tikhub_allowed": False},
-            "tiktok_public_profile": {"source": "tiktok_public_page", "challenge_policy": "stop_for_human"},
             "instagram": {"source": "tikhub_api"},
             "youtube": {"source": "tikhub_api"},
         },
@@ -160,19 +153,7 @@ def read_discovery_results(output_dir: str, limit: int = 100) -> dict[str, Any]:
     if summary_path.exists():
         import json
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    rows = _read_csv(final_path, limit)
-    return {
-        "output_dir": str(out),
-        "summary": summary,
-        "rows": rows,
-        "outreach_handoff": {
-            "contract_version": "outreach-candidate.v1",
-            "candidates_file": str(final_path),
-            "format": "csv",
-            "row_count": len(rows),
-            "next_step": "Upload this file with the LOOP project's 导入达人 action.",
-        },
-    }
+    return {"output_dir": str(out), "summary": summary, "rows": _read_csv(final_path, limit)}
 
 
 @mcp.tool()
@@ -298,42 +279,6 @@ def analyze_creator_features(username: str, recent_videos: int = 10) -> dict[str
     features = compute_basic_features(_creator_from_videos(username, raw_videos))
     passed, reason = hard_filter(features)
     return {**features, "hard_filter_passed": passed, "hard_filter_reason": reason}
-
-
-@mcp.tool()
-def collect_tiktok_public_profiles(
-    usernames: list[str],
-    output_file: str = "output/tiktok_public_profiles.csv",
-    headed: bool = False,
-    resume: bool = True,
-    min_delay_ms: int = 4000,
-    max_delay_ms: int = 9000,
-) -> dict[str, Any]:
-    """Collect public TikTok profile evidence with bounded browser-side extraction.
-
-    The collector stops on CAPTCHA, login walls, HTTP 403/429 or other human
-    verification. It does not bypass access controls or accept arbitrary JS.
-    """
-    cleaned = list(dict.fromkeys(_clean_username(value) for value in usernames if _clean_username(value)))
-    if not 1 <= len(cleaned) <= 100:
-        raise ValueError("usernames must contain 1..100 valid handles")
-    destination = Path(output_file).expanduser()
-    if not destination.is_absolute():
-        destination = PROJECT_DIR / destination
-    rows = browser_collect_tiktok_profiles(
-        cleaned, destination, headed=headed, resume=resume,
-        min_delay_ms=min_delay_ms, max_delay_ms=max_delay_ms,
-    )
-    return {
-        "platform": "tiktok",
-        "source": "tiktok_public_page",
-        "output_file": str(destination),
-        "requested": len(cleaned),
-        "collected": sum(row.get("status") == "collected" for row in rows),
-        "review_required": sum(row.get("status") == "review_required" for row in rows),
-        "errors": sum(row.get("status") == "error" for row in rows),
-        "rows": rows,
-    }
 
 
 @mcp.tool()
@@ -525,22 +470,16 @@ def run_shop_discovery(
     resume: bool = False,
     verify_email_dns: bool = True,
     early_stop: bool = True,
-    browser_min_delay_ms: int = 2500,
-    browser_max_delay_ms: int = 6500,
 ) -> dict[str, Any]:
     """Run TikTok Shop creator discovery exclusively through FastMoss."""
     if target < 1 or max_followers < 1 or pool_multiplier < 1 or inspect_workers < 1:
         raise ValueError("target, max_followers, pool_multiplier and workers must be positive")
-    if browser_min_delay_ms < 1000 or browser_max_delay_ms < browser_min_delay_ms:
-        raise ValueError("browser pacing must be at least 1000 ms and max >= min")
     args = [
         "--target", str(target),
         "--max-followers", str(max_followers),
         "--pool-multiplier", str(pool_multiplier),
         "--inspect-workers", str(inspect_workers),
         "--output-dir", output_dir,
-        "--browser-min-delay-ms", str(browser_min_delay_ms),
-        "--browser-max-delay-ms", str(browser_max_delay_ms),
     ]
     if countries:
         args.extend(["--countries", *countries])
@@ -557,18 +496,11 @@ def run_shop_discovery(
     if not early_stop:
         args.append("--no-early-stop")
     result = _run_script("mass_discovery.py", args)
-    final_file = str(result.get("final_file") or (Path(output_dir).expanduser() / "final.csv"))
     return {
         **result,
         "platform": "tts",
         "source": "fastmoss",
         "tikhub_requests": 0,
-        "outreach_handoff": {
-            "contract_version": "outreach-candidate.v1",
-            "candidates_file": final_file,
-            "format": "csv",
-            "next_step": "Upload this file with the LOOP project's 导入达人 action.",
-        },
     }
 
 

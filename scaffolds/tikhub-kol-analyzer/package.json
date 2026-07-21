@@ -7,10 +7,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test test/browser_resilience.test.mjs",
     "fastmoss:setup": "node fastmoss_browser.mjs --setup --setup-timeout 900",
-    "fastmoss:collect": "node fastmoss_browser.mjs",
-    "tiktok:collect": "node tiktok_browser.mjs"
+    "fastmoss:collect": "node fastmoss_browser.mjs"
   },
   "dependencies": {
     "playwright": "^1.55.0"

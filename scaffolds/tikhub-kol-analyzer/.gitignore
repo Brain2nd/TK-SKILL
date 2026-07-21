@@ -20,10 +20,6 @@ playwright-report/
 # Local Claude Code permissions and credentials must never be published.
 .claude/
 .fastmoss-browser-profile/
-output/**/browser_diagnostics/
-output/browser_diagnostics/
-output/**/*.checkpoint.json
-output/*.checkpoint.json
 
 # macOS
 .DS_Store
